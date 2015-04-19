@@ -1,0 +1,220 @@
+\documentclass[12pt]{article}
+\usepackage[fleqn]{amsmath}
+   
+
+\title{CS 325 Assignment 3}
+\author{Neale Ratzlaff}
+\date{19 April 2015}
+
+\begin{document}
+\maketitle
+\pagebreak
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        Problem 1          %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Problem 1}
+
+  \subsection{Question:}
+    Give the asymptotic bounds for T(n) in each of the following recurrences. Make your bounds as tight and justify your answers    
+    \begin{itemize}
+      \item[a:] $ T(n) = T(n-2) + n $
+      \item[b:] $ T(n) = T(n-1) + 3 $
+      \item[c:] $ T(n) = 2T(\frac{n}{4}) + n$
+      \item[d:] $ T(n) = 4T(\frac{n}{4}) + n^2\sqrt{n} $
+    \end{itemize}
+ 
+  \subsection{Solution:}
+
+    \begin{itemize}
+      \item[a:] a can be solved with the iteration method. The method iterates over the list and subtracts two for eah iteration. After iterating out the recurrence for some times it turns into
+        \begin{equation}
+          \begin{aligned}
+            & T(n) = T(n-8) + (n-6) + (n-4) + (n-2) \\
+            & T(n) = T(n-(2i+2)) + (n - 2i) \\
+            & \text{If we assume that $i = n$} \\
+            & T(n) = O(n^2) \\
+          \end{aligned}
+        \end{equation}
+
+
+      \item[b:] b can be solved with the iteration method as well. This one is easier once it is recognized that the dominating term in the recurrence is the $T(n-1)$ term, as the constant's effect is negligible. We can see that the recurrence runs for a total of $\frac{n}{2}$ times. Giving a complexity of $cn$, or 
+        $$T(n) = \Theta(n)$$
+
+      \item[c:] c can solved with the master theorem 
+        \begin{displaymath} \
+          T(n) = \left\{
+          \begin{array}{ll}
+            aT(\frac{n}{b}) + n^c & : n > 1 \\
+            d & : n = 1 \\
+          \end{array}
+          \right.
+        \end{displaymath}
+        Where $a = 2, b = 4, c = 1$ giving a complexity of $\Theta(n^c)$. C therefore has a complexity $$\Theta(n)$$
+      \item[d:] With a slight change to the master theorem, f(n) can be tested to see if it is the largest term asymptotically.   c can solved with the master theorem 
+        \begin{displaymath} \
+          T(n) = \left\{
+          \begin{array}{ll}
+            aT(\frac{n}{b}) + f(n) & : n > 1 \\
+            d & : n = 1 \\
+          \end{array}
+          \right.
+        \end{displaymath}
+
+        $f(n)$ is $\Omega(n^{\log_ba+e})$ so test f(n) to see that $$ n^2\sqrt(n) = \Omega(n^{1.1})$$
+        According to the master theorem, this allows us to test for the dominating term in the recurrence. 
+        \begin{equation}
+          \begin{aligned}
+            & af(\frac{n}{b}) \le cf(n) \\
+            & 4(\frac{n}{b})^2 \le cn^{2.5} \\
+            & 4(\frac{n^{2.5}}{32}) \le cn^{2.5} \\
+            & (\frac{n^{2.5}}{8}) \le cn^{2.5} \\
+            & \text{with solution $c = \frac{1}{8} \le 1$} \\
+            & T(n) = \Theta(n^{2.5}) \\
+          \end{aligned}
+        \end{equation}
+    \end{itemize}
+\pagebreak
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        Problem 2          %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Problem 2}
+
+    \subsection{Question:} 
+
+      Suppose you are choosing between the following three algorithms:
+      \begin{itemize}
+        \item[a:] Algorithm A solves problems by dividing them into five subproblems of half the size, recursively solving each subproblem, and then combining the solutions in linear time.
+        \item[b:] Algorithm B solves problems of size n by recursively solving two subproblems of size (n -1) and then combining the solutions in constant time.
+        \item[c:] Algorithm C solves problems of size n by dividing them into nine subproblems of size $\frac{n}{3}$ , recursively solving each subproblem, and then combining solutions in $O(n^2)$ time.
+      \end{itemize}
+
+    \subsection{Solution:}
+
+      \begin{itemize} 
+        \item 
+            Algorithm A can be solved with the master theorem where $a = 5, b = 2, c = 0$ giving $$\log_ba \ge c \rightarrow \Theta(n^{\log_25})$$
+        \item
+            Algorithm B can be solved with iteration. Expanding out the recurrence leads to something resembling
+            $$T(n) = (2(2^i))T(n-i) + ic$$
+            If we assume that n here = $2^k$, then the recurrence comes out have linear time, or 
+            $$T(n) = O(n)$$
+            This should be expected because if we logically examine the recurrence it can be seen that the recurrence iterates simply generates two subproblems, n times. Which should intuitively mean a complexity of $2n$, or aysymptotically, $O(n)$
+        \item 
+            Algorithm C can also be solved with the master theorem where $a = 9, b = 3, f(n) = n^2$ This requires solving a recurrence to see which term dominates, $f(n)$, or $9T(\frac{n}{3})$ 
+          \begin{equation}
+            \begin{aligned} 
+              & f(n) = \Omega(n^{log_ba + e}) for & e > 0 \\
+              & n^2 = \Omega(n^{1.1}) \\
+              & af(\frac{n}{b}) \le cf(n) \\
+              & 9T(\frac{n}{3} \le cn^2 \\
+              & 9(\frac{n}{3}) \le cn^2 \\
+              & n^2 \le cn^2 for c \ge 1 \\
+            \end{aligned}
+          \end{equation}
+            Because $c$ here is equal to one to make the expressions equal, the equation holds and the complexity of algorithm C is $$\Theta(n^2)$$
+      \end{itemize}
+
+\pagebreak
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        Problem 3          %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Problem 3}
+
+      \subsection{Question:}
+        How many lines as a function of n (in $\Theta$form), does the following PHP function print? Write a recurrence and solve it. You may assume n is a power of 2. 
+        \begin{verbatim}
+          function foo(n) { 
+            if($n > 1) 
+              echo "Still Printing <br>"; 
+                foo(n/2); 
+                  foo(n/2); 
+            } else {  
+                return 1; 
+            }
+          } 
+        \end{verbatim}
+      \subsection{Solution:}
+
+        The script makes two recursive calls with size $\frac{n}{n}$, it also makes two constant time comparison, with at most two more constant time operations following them. The recurrence is given by 
+        \begin{equation}
+          \begin{aligned}
+            & T(n) = 2T(\frac{n}{2}) + c \\
+            & \text{If done with iteration, and assuming that $2^k = n$, it is found that} \\
+            & T(n) = (2^k - 1) + 2^kT(\frac{2}{2^k}) \\
+            & T(n) = (n - 1) + nT(1) \\
+            & T(n) = \Theta(n) \\
+          \end{aligned} 
+        \end{equation}
+        This answer can be verified with the master theorem, where $$T(n) = \Theta(n^{\lg2}) = \Theta(n)$$
+
+\pagebreak
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        Problem 4          %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Problem 4}
+
+    \subsection{Question:}
+      The ternary search algorithm is a modification of the binary search algorithm that splits the input not into two sets of almost-equal sizes, but into three sets of sizes approximately one-third. Write pseudo-code for the ternary search algorithm, give the recurrence for the ternary search algorithm and determine the asymptotic complexity of the algorithm. Compare the running time of the ternary search algorithm to that of the binary search algorithm.
+
+    \subsection{Solution:}
+
+      \begin{verbatim}
+        function tenery_search(list A, x):
+
+          if length(A) <= 1
+            if A = x return true
+              else return false
+
+          else
+            if x > element at length(A) * 1/3 
+              if x > element at length(A) * 2/3
+                b = top third of A
+              else:
+                b = middle third of A
+            else:
+              b = first third of A
+
+          return tenery_search(b, x)
+      \end{verbatim}
+
+      The binary search recurrence is given by 
+      $$T(n) = T(\frac{n}{2}) + c$$
+      
+      The ternary search is much the same, but requires a couple more comparisons each with complexity $O(1)$. Since ternary search differs significantly in the size of the fractioned list, because the list is broken up twice in each iteration in order to slice the original list into thirds. The recurrence is given here:
+
+      $$T(n) = T(\frac{2n}{3}) + c$$
+
+      The complexity can be solved with the master theorem, where for the ternary search, $a = 1$, $b = \frac{3}{2}$, and $c = 0$, by the master theorem tenery search has the complexity: 
+    \begin{equation}
+      \begin{aligned}
+        & T(n) = \Theta(\log_3(n)) \\
+        & T(n) = \Theta(\log(n)) \\
+      \end{aligned}
+    \end{equation}
+
+     
+      The binary search alrorithm can be evaluated with the master theorem the same way instead with the recurrence $T(n) = T(\frac{n}{2}) + c$. The solution gives a similar complexity to the tenery search differing by the base of the log. This difference is negligible asymptotically. The complexity of the binary search algorithm is given by:
+      \begin{equation}
+        \begin{aligned}
+          & T(n) = \Theta(\log_2(n)) \\
+          & T(n) = \Theta(\log(n)) \\
+        \end{aligned}
+      \end{equation}
+
+\pagebreak
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        Problem 5          %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Problem 5}
+
+    \subsection{Question:}
+      A k-way merge operation. Suppose you have k sotred arrays, each with n elements, and you want to combine them into a single sorted array of kn elements.
+      \begin{itemize}
+        \item[a] One strategey: Using a merge procedure, merge the first two arrays, then merge in the third array, then merge in the fourth, and so on. What is the time complexity of this algorithm in terms of k and n?
+        \item[b] Design a more efficient algorithm to solve this problem using divide and conquer.
+      \end{itemize} 
+     
+    \subsection{Solution:}
+      
+      The procedure involves merging each list, and sorting each new list into the larger list. In order to do this, the new element to be merged has to be inserted into the combined list at the appropriate index if the k lists are not sorted with respect to each other. Putting two lists end to end from each other has takes time $O(1)$. Each individually sorted list is then sorted into the whole, each list is appended then sorted, forming a merge. If this is generalized to a mergesort among k arrays, the complexity of $O(n\log(n))$ becomes 
+
+      $$O(kn\log(n))$$
+      
+      First take each list and concatenate them, so that there is one large array of size $kn$, this operation is linear with k lists. Then perform mergesort on the $kn$ list. Mergesort is a divide and conquer algorithm that reduces the merged array into indiviaual elements, then compares each element with the first element in the next list. Mergesort has a known complexity of 
+      $$O(n\log(n))$$
+
+\end{document}
