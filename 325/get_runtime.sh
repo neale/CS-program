@@ -1,7 +1,7 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
+DIR="$(pwd)"
 IFS=","
-PROGRAMS="./*"
+PROGRAMS="./algorithm2.py, ./algorithm3.py, algorithm4.py"
 ITERATIONS="1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000"
 mkdir times 
 touch times/times.txt 
@@ -11,7 +11,7 @@ do
   for ITERATION in $ITERATIONS
   do
     echo "generating randdom array $ITERATION"
-    { python $i $ITERATION ; } 2>> ./times/times.txt
+    python $i $ITERATION 2>&1 >> ./times/times.txt
   done
 done
 echo "finshed, times for each program can be found in times/times.txt"

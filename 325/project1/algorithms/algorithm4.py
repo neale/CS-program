@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from random import randint
 import sys
 import time
@@ -18,7 +19,7 @@ def long(lst):
         return []
     maxSum, tempSum, start, end = 0, 0, 0, 0
     for i in lst:
-        index = lst[i]
+        index = i
         if(tempSum):
             if(tempSum + i == max(maxSum, tempSum+i, i)):
                 end = index + 1
@@ -43,6 +44,6 @@ def long(lst):
 def time_func(elems):
     return long(elems)
 
-elems = [randint(-20, 20) for x in range(0, int(sys.srgv[1]))]
+elems = [randint(-20, 20) for x in range(0, int(sys.argv[1]))]
 print "running\n", "passing: ", elems, "\noutput: ", time_func(elems)
 
