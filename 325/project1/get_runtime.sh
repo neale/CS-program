@@ -11,7 +11,7 @@ do
   for ITERATION in $ITERATIONS
   do
     echo "generating randdom array $ITERATION"
-    { python $i $ITERATION ; } 2>> ./times/times.txt
+    python $i $ITERATION 2>> ./times/times.txt
   done
 done
 echo "finshed, times for each program can be found in times/times.txt"
