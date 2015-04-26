@@ -1,6 +1,5 @@
 from random import randint
 import sys
-import timeit
 import time
 
 def timing(f):
@@ -17,7 +16,7 @@ def max_crossing_subarray(lst, low, mid, high):
     leftsum = -sys.maxint
     maxright, maxleft = 0, 0    
     sum = 0
-    for i in range(mid, low, -1):
+    for i in range(mid, low-1, -1):
         sum += lst[i]
         if sum > leftsum:
             leftsum = sum
@@ -29,7 +28,12 @@ def max_crossing_subarray(lst, low, mid, high):
         if sum > rightsum:
             rightsum = sum
             maxright = j
-    return (maxright, maxleft, leftsum + rightsum)
+    totalSum = 0
+    if leftsum > 0:
+        totalSum += leftsum
+    if rightsum > 0:
+        totalSum += rightsum
+    return (maxright, maxleft, totalSum)
 
 def max_subarray(lst, low, high):
     if high == low:
@@ -51,7 +55,7 @@ def call_for_time(lst, start, end):
     return max_subarray(lst, start, end)
 
 
-lst = [randint(-10, 10) for x in range(0, 10)]
+lst = [randint(-10, 10) for x in range(0, int(sys.argv[1]))]
 idx = call_for_time(lst, 0, len(lst))
 subarr = [lst[i] for i in range(idx[1], idx[0]+1)]
 print lst, '\n', subarr, '\nsum: ', idx[2]
