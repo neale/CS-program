@@ -1,0 +1,117 @@
+\documentclass[letterpaper,10pt,titlepage]{article}
+
+\usepackage{graphicx}                                        
+\usepackage{amssymb}                                         
+\usepackage{amsmath}                                         
+\usepackage{amsthm}                                          
+
+\usepackage{alltt}                                           
+\usepackage{float}
+\usepackage{color}
+\usepackage{url}
+
+\usepackage{balance}
+%\usepackage[TABBOTCAP, tight]{subfloat}
+\usepackage{enumitem}
+\usepackage{pstricks, pst-node}
+
+\usepackage{geometry}
+\geometry{textheight=8.5in, textwidth=6in}
+
+%random comment
+
+\include{pygments.tex}
+
+\newcommand{\cred}[1]{{\color{red}#1}}
+\newcommand{\cblue}[1]{{\color{blue}#1}}
+
+\usepackage{hyperref}
+\usepackage{geometry}
+
+\def\name{Neale Ratzlaff}
+\title{Computer Architecture Assignment 1}
+\author{Neale Ratzlaff}
+\date{30 September 2015}
+
+%pull in the necessary preamble matter for pygments output
+\input{pygments.tex}
+
+
+%% The following metadata will show up in the PDF properties
+\hypersetup{
+  colorlinks = true,
+  urlcolor = black,
+  pdfauthor = {\name},
+  pdfkeywords = {cs311 ``operating systems'' files filesystem I/O},
+  pdftitle = {CS 311 Project 1: UNIX File I/O},
+  pdfsubject = {CS 311 Project 1},
+  pdfpagemode = UseNone
+}
+
+\begin{document}
+\maketitle
+\pagebreak
+
+%input the pygmentized output of foo.c, using a (hopefully) unique name
+%this file only exists at compile time. Feel free to change that.
+\section{Difference between architecture and organization}
+    \newline
+    \newline
+    Organization is what most people think of when they think of architecture,
+    when organization is mostly defined by the ISA. Organization is the physical layout of the 
+    hardware. The layout of the memory stack, how the ICs are alligned onboard are all part 
+    of the organization of the computer. This is important as data transfer speeds, power
+    consumption, and system functionality are all affected by the organization. 
+    \\*
+    \\*
+    Architecture is essentially the computer's instruction set. The set of rules that define how 
+    the processor will behave, which in turn necessitates organizational features. The architecture
+    may also include the microarchitecture of the processor, or how the processor will implement
+    each instruction in the ISA (a black box to users). 
+
+
+\pagebreak
+
+\section{Endianness}
+    \\*
+    \\*
+    Endianness is the concept of ordering with respect to bits in the system 
+    There are two types of endianness in modern computers, big-endian and little-endian 
+    In a big-endian system, the smallest memory address stores the most significant byte of a memory word 
+    Little-endian systems store the least significant byte in the largest memory address. 
+    Intel's x86 architecture uses little-endian representations. Little-endian systems 
+    are also common with microprocessors due to Intel's influence. Big-endian 
+    systems are most commonly found in computer networking applications. 
+    There is also another type called a mixed-endian system. A mixed system will have 
+    a different endianness for 16bit words vs. 32 bit words. Bi-endian processors 
+    can operate in little-endian or big-endian mode. 
+    \\*
+    \\*
+    
+\pagebreak
+
+\section{Floating point format (IEEE)}
+
+    \\*
+    \\*
+    Single precision format is known as binary32. Binary32 consists of 
+    \begin{itemize}
+        \item 1 bit sign bit
+        \item 8 bit exponent bit
+        \item 24 bit significand component (23 explicitly stored)
+    \end{itemize}
+    \\*
+    Double precision format is called binary64:
+    \begin{itemize}
+        \item 1 bit sign bit
+        \item 11 bit exponent bit
+        \item 24 53 significand component (52 explicitly stored)
+    \end{itemize}
+
+\pagebreak
+
+\section{Memory heirarchy}
+
+
+
+\end{document}
