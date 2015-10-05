@@ -1,5 +1,5 @@
 // lab2_skel.c 
-// R. Traylor
+// Neale Ratzlaff
 // 9.12.08
 
 //  HARDWARE SETUP:
@@ -20,6 +20,14 @@ uint8_t segment_data[5]
 //decimal to 7-segment LED display encodings, logic "0" turns on segment
 uint8_t dec_to_7seg[12] 
 
+int8_t debounce_switch() {
+  static uint16_t state = 0; //holds present state
+  state = (state << 1) | (! bit_is_clear(PIND, 0)) | 0xE000;
+  if (state == 0xF000) {
+      return 1;
+  }
+  return 0;
+}
 
 //******************************************************************************
 //                            chk_buttons                                      
@@ -32,6 +40,9 @@ uint8_t dec_to_7seg[12]
 //
 uint8_t chk_buttons(uint8_t button) {
 //******************************************************************************
+    while(!button) {
+        debounce_switch();
+
 
 //***********************************************************************************
 //                                   segment_sum                                    
