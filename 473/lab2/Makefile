@@ -1,4 +1,4 @@
-PRG            =led_display_test
+PRG            =lab2_skel
 
 OBJ            = $(PRG).o
 
