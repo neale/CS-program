@@ -50,10 +50,17 @@ uint8_t chk_buttons(uint8_t button) {
 //BCD segment code in the array segment_data for display.                       
 //array is loaded at exit as:  |digit3|digit2|colon|digit1|digit0|
 void segsum(uint16_t sum) {
+  int digits = 0;
   //determine how many digits there are 
+  while (sum != 0) {
+    sum /= 10;
+    digits++;
+  } 
   //break up decimal sum into 4 digit-segments
+  thousands = sum % 100
   //blank out leading zero digits 
   //now move data to right place for misplaced colon position
+  return digit_array;
 }//segment_sum
 //***********************************************************************************
 
@@ -62,16 +69,36 @@ void segsum(uint16_t sum) {
 uint8_t main()
 {
 //set port bits 4-7 B as outputs
+int seg_count = 0;
+int digit[4] = {1, 2, 3, 4};
 while(1){
   //insert loop delay for debounce
+ _delay_ms(2);
+ 
   //make PORTA an input port with pullups 
+  DDRA = 0x00;
+  PORTA = 0xFF;
   //enable tristate buffer for pushbutton switches
+  PORTA = 0x00;
   //now check each button and increment the count as needed
+  for (int i = 0; i < 8; i++) {
+
+    if ((PINA >> 1*i) & 0x01) {
+      
+  } while (!button);
   //bound the count to 0 - 1023
+  if (count == 1023) {
+    count = 0;
+  }
   //break up the disp_value to 4, BCD digits in the array: call (segsum)
+  seg_count = segsum(count);
   //bound a counter (0-4) to keep track of digit to display 
+  
   //make PORTA an output
+  DDRA = 0xFF;
+  PORTA = 0x00;
   //send 7 segment code to LED segments
+  PORTB = seg_count;
   //send PORTB the digit to display
   //update digit to display
   }//while
