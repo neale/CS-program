@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     memcpy(vendor + 8, (char*)&ecx, 4);
     vendor[12] = 0;   
     
-    printf("vendor: %s\n", vendor);
+    printf("vendor: %s\n\n", vendor);
 
     int cache_size = 0;
 
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
                 printf("system line size: %u\n", ebx & 0xFF);
                 printf("line partitions: %u\n",((ebx>>12) & 0x3FF) + 1);
                 printf("associativity: %u\n\n", (ebx >> 22));
-                printf("cache size: %d", cache_size);
+                printf("cache size: %d\n", cache_size);
                 break;
 
             case(2):
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
                 printf("system line size: %u\n", ebx & 0xFFF);
                 printf("line partitions: %u\n",((ebx>>12)+1) & 0x3FF);
                 printf("associativity: %u\n\n", (ebx >> 22));
-                printf("cache size: %d", cache_size);
+                printf("cache size: %d\n", cache_size);
 
                 break;
             case(3):
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
                 printf("system line size: %u\n", ebx & 0xFFF);
                 printf("line partitions: %u\n",((ebx>>12)+1) & 0x3FF);
                 printf("associativity: %u\n\n", (ebx >> 22));
-                printf("cache size: %d", cache_size);
+                printf("cache size: %d\n", cache_size);
 
                 break;
             default:
@@ -242,8 +242,8 @@ int main(int argc, char **argv) {
     eax = 0x80000000;
     cpuid(&eax, &ebx, &ecx, &edx);
     if (eax > 0x80000004) {
-        printf("\nnecessary instructions included\n");
-        printf("eax > 0x80000004\n");
+        printf("necessary instructions included\n");
+        printf("eax > 0x80000004\n\n");
     }
     else {
         printf("Nope, idiot");
@@ -269,9 +269,7 @@ int main(int argc, char **argv) {
     ecx = 0;
     eax = 0x07;
     cpuid(&eax, &ebx, &ecx, &edx);
-    printf("ECX leaf: %d\n", i);
-    printf("EBX leaf: %u\n", ebx);
-    
+    for (i 
     printf("max input value %u\n", eax);  
     if (ebx & 0x01) {
         printf("Supports RDFSBASE/RDGSBASE/WRFSBASE/WRGSBASE\n");
