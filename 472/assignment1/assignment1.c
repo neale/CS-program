@@ -115,6 +115,7 @@ int main(int argc, char **argv) {
                 );
                 j++;
                 break;
+            
             case(0x02):
                 printf("TLB Instruction TLB: 4 MByte pages, fully" \
                         "associative, 2 entries"
@@ -218,7 +219,7 @@ int main(int argc, char **argv) {
 
 // number of logical CPUs
 
-
+    
 
 // CPU family
 
@@ -242,7 +243,7 @@ int main(int argc, char **argv) {
     cpuid(&eax, &ebx, &ecx, &edx);
     if (eax > 0x80000004) {
         printf("\nnecessary instructions included\n");
-        printf("eax > 0x80000004");
+        printf("eax > 0x80000004\n");
     }
     else {
         printf("Nope, idiot");
@@ -256,105 +257,105 @@ int main(int argc, char **argv) {
     
     cpuid(&eax, &ebx, &ecx, &edx);
    
-    printf("\nProc frequency specs");
-    printf("\nBase Frequency (MHz) : %u", eax & 0xFF);
-    printf("\nMax Frequency (MHz)  : %u", ebx);
-    printf("\nBus Frequency (MHz)  : %u", ecx);
+    printf("Proc frequency specs\n");
+    printf("Base Frequency (MHz) : %u\n", eax & 0xFF);
+    printf("Max Frequency (MHz)  : %u\n", ebx);
+    printf("Bus Frequency (MHz)  : %u\n", ecx);
     
 
 
 //CPU features available
-    for (i = 0; i < 7; i++) {
-        
-        ecx = i;
-        eax = 0x07;
-        cpuid(&eax, &ebx, &ecx, &edx);
-        printf("ECX leaf: %d\n", i);
-        
-        printf("max input value %u\n", eax & 0xFFFFFFFF);  
-        if (ebx & 0x01) {
-            printf("Supports RDFSBASE/RDGSBASE/WRFSBASE/WRGSBASE\n");
-        } else {
-            printf("RDFSBASE/RDGSBASE/WRFSBASE/WRGSBASE unsupported\n");
-        }
-        if ((ebx >> 1) & 0x01) {
-            printf("ia32_tsc_adjust msr is supported\n");
-        } else {
-            printf("ia32_TSC_ADJUST MSR unsupported\n");
-        }
-        printf("BMI1: %u\n", (ebx >> 3) & 0x01);
-        printf("HLE: %u\n", (ebx >> 4) & 0x01);
-        printf("AVX2: %u\n", (ebx >> 4) & 0x01);
-
-        if ((ebx >> 7) & 0x01) {
-            printf("Supports Supervisor-Mode Execution Prevention\n");
-        } else {
-            printf("Supervisor-Mode Execution Prevention unsupported\n");
-        }
-        
-        printf("BMI2: %u\n", (ebx >> 8) & 0x01);
-        
-        if ((ebx >> 9) & 0x01) {
-            printf("Supports Enhanced REP MOVSB/STOSB\n");
-        } else {
-            printf("Enhanced REP MOVSB/STOSB unsupported\n");
-        }
-        
-        if ((ebx >> 10) & 0x01) {
-            printf("supports INVPCID instruction\n");
-        } else {
-            printf("INVPCID unsupported\n");
-        }
-        
-        printf("RTM: %u\n", (ebx >> 11) & 0x01);
-        
-        if ((ebx >> 12) & 0x01) {
-            printf("Supports PQM capability\n");
-        } else {
-            printf("RQM supported\n");
-        }
-        
-        if ((ebx >> 13) & 0x01) {
-            printf("FPU CS and FPU DS values deprecated\n");
-        } else {
-            printf("FPU CS and FPU DS values in tact\n");
-        }
-        
-        if ((ebx >> 14) & 0x01) {
-            printf("Supports Intel Memory Protection\n");
-        } else {
-            printf("Intel memory Protection unsupported\n");
-        }
-        
-        if ((ebx >> 15) & 0x01){
-            printf("PQE supported\n");
-        } else {
-            printf("PQE Unsupported\n");
-        }
-        
-        printf("RDSEED: %u\n", (ebx >> 18) & 0x01);
-        printf("ADX: %u\n", (ebx >> 19) & 0x01);
-        if ((ebx >> 20) & 0x01) {
-            printf("SMAP supported\n");
-        } else {
-            printf("SMAP unsupported\n");
-        }    
-        printf("Intel Processor Trace: %u\n", (ebx >> 25) & 0x01);
-        
-        printf("PREFETCHWT1: %u\n", (ecx & 0x01));
-        
-        if ((ecx >> 3) & 0x01) {
-            printf("PKU supported\n");
-        } else {
-            printf("PKU Unsupported\n");
-        }
-
-        if ((ecx >> 4) & 0x01) {
-            printf("OSPKE, has CR4 and RDPKRU/WRPKRU instructions\n");
-        } else {
-            printf("OSPKE unsupported\n");
-        }
+    
+    ecx = 0;
+    eax = 0x07;
+    cpuid(&eax, &ebx, &ecx, &edx);
+    printf("ECX leaf: %d\n", i);
+    printf("EBX leaf: %u\n", ebx);
+    
+    printf("max input value %u\n", eax);  
+    if (ebx & 0x01) {
+        printf("Supports RDFSBASE/RDGSBASE/WRFSBASE/WRGSBASE\n");
+    } else {
+        printf("RDFSBASE/RDGSBASE/WRFSBASE/WRGSBASE unsupported\n");
     }
+    if ((ebx >> 1) & 0x01) {
+        printf("ia32_tsc_adjust msr is supported\n");
+    } else {
+        printf("ia32_TSC_ADJUST MSR unsupported\n");
+    }
+    printf("BMI1: %u\n", (ebx >> 3) & 0x01);
+    printf("HLE: %u\n", (ebx >> 4) & 0x01);
+    printf("AVX2: %u\n", (ebx >> 4) & 0x01);
+
+    if ((ebx >> 7) & 0x01) {
+        printf("Supports Supervisor-Mode Execution Prevention\n");
+    } else {
+        printf("Supervisor-Mode Execution Prevention unsupported\n");
+    }
+    
+    printf("BMI2: %u\n", (ebx >> 8) & 0x01);
+    
+    if ((ebx >> 9) & 0x01) {
+        printf("Supports Enhanced REP MOVSB/STOSB\n");
+    } else {
+        printf("Enhanced REP MOVSB/STOSB unsupported\n");
+    }
+    
+    if ((ebx >> 10) & 0x01) {
+        printf("supports INVPCID instruction\n");
+    } else {
+        printf("INVPCID unsupported\n");
+    }
+    
+    printf("RTM: %u\n", (ebx >> 11) & 0x01);
+    
+    if ((ebx >> 12) & 0x01) {
+        printf("Supports PQM capability\n");
+    } else {
+        printf("RQM supported\n");
+    }
+    
+    if ((ebx >> 13) & 0x01) {
+        printf("FPU CS and FPU DS values deprecated\n");
+    } else {
+        printf("FPU CS and FPU DS values in tact\n");
+    }
+    
+    if ((ebx >> 14) & 0x01) {
+        printf("Supports Intel Memory Protection\n");
+    } else {
+        printf("Intel memory Protection unsupported\n");
+    }
+    
+    if ((ebx >> 15) & 0x01){
+        printf("PQE supported\n");
+    } else {
+        printf("PQE Unsupported\n");
+    }
+    
+    printf("RDSEED: %u\n", (ebx >> 18) & 0x01);
+    printf("ADX: %u\n", (ebx >> 19) & 0x01);
+    if ((ebx >> 20) & 0x01) {
+        printf("SMAP supported\n");
+    } else {
+        printf("SMAP unsupported\n");
+    }    
+    printf("Intel Processor Trace: %u\n", (ebx >> 25) & 0x01);
+    
+    printf("PREFETCHWT1: %u\n", (ecx & 0x01));
+    
+    if ((ecx >> 3) & 0x01) {
+        printf("PKU supported\n");
+    } else {
+        printf("PKU Unsupported\n");
+    }
+
+    if ((ecx >> 4) & 0x01) {
+        printf("OSPKE, has CR4 and RDPKRU/WRPKRU instructions\n");
+    } else {
+        printf("OSPKE unsupported\n");
+    }
+    
     return 0;
 }
 

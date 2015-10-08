@@ -23,7 +23,11 @@ if [ $CHOICE = "rows" ]; then
         #assign length to cols
         COLS=${#LINE}
         echo cols: $COLS
-    
+        
+        #arithmatic expansion
+        #for (( i=0l; i < 
+        #NUM=$(( num1 + num2))
+
     done
 fi
 

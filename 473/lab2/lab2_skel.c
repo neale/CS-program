@@ -13,6 +13,21 @@
 #define FALSE 0
 #include <avr/io.h>
 #include <util/delay.h>
+
+#define ONE 0b10011110;
+#define TWO 0b00100100;
+#define THREE 0b00001100;
+#define FOUR 0b10011000;
+#define FIVE 0b01001000;
+#define SIX 0b01000000;
+#define SEVEN 0b00011110;
+#define EIGHT 0b00000000;
+#define NINE 0b00001000;
+#define ZERO 0b00000010;
+
+#define CLEAR(x) (x = 0x00)
+#define SET(x) (x = 0xFF)
+
 //holds data to be sent to the segments. logic zero turns segment on
 uint8_t segment_data[5]; 
 
@@ -28,6 +43,7 @@ int8_t debounce_switch() {
   return 0;
 }
 
+int __builtin_popcount (unsigned int x);
 //******************************************************************************
 //                            chk_buttons                                      
 //Checks the state of the button number passed to it. It shifts in ones till   
@@ -48,34 +64,34 @@ uint8_t get_segment(uint8_t bcd) {
     switch (bcd) {
         
         case(1) :
-            return 0x30;
+            return ONE;
             break;
         case(2) :
-            return 0x6D;
+            return TWO;
             break;
         case(3) :
-            return 0x79;
+            return THREE;
             break;
         case(4) :
-            return 0x33;
+            return FOUR;
             break;
         case(5) :
-            return 0x5B;
+            return FIVE;
             break;
         case(6) :
-            return 0x1F;
+            return SIX;
             break;
         case(7) :
-            return 0x70;
+            return SEVEN;
             break;
         case(8) :
-            return 0x7F;
+            return EIGHT;
             break;
         case(9) :
-            return 0x73;
+            return NINE;
             break;
         case(0) :
-            return 0x7C;
+            return ZERO;
             break;
         default:
             return 0;
@@ -109,7 +125,7 @@ void segsum(uint16_t sum, unsigned int *digit_array) {
 
 //***********************************************************************************
 void main() {
-
+    //int nums = 0;
     uint8_t i = 0;
     uint16_t count = 0;
     unsigned int seg_count[5] = {0};
@@ -119,42 +135,41 @@ void main() {
     PORTB = 0x00;
     /*while (1) {
         DDRA = 0xFF;
-        PORTB = (4 << 4);
+        DDRB = 0xFF;
+        PORTB = __builtin_popcount(0b00000001);
         PORTA = 0x00;
     }*/
+
     while(1){
       //insert loop delay for debounce
-     _delay_ms(2);
-     
+      _delay_ms(2);
       //make PORTA an input port with pullups 
-      DDRA = 0x00;
-      PORTA = 0xFF;
+      CLEAR(DDRA);
+      SET(PORTA);
       //enable tristate buffer for pushbutton switches
-      PORTA = 0x00;
-      //now check each button and increment the count as needed
-      for (i = 0; i < 8; i++) {
-
-          if (PINA & (1 << i)) {
-            count++;
-            PORTB = (1 << 0);
-        //bound the count to 0 - 1023
-              if (count == 1023) {
-                count = 0;
-              }
-          }
+      CLEAR(PORTA);
+      
+      //bound the count to 0 - 1023
+      count += __builtin_popcount(PINA);
+      
+      if (count == 1023) {
+          count = 0;
       }
+      
       segsum(count, seg_count);
       //break up the disp_value to 4, BCD digits in the array: call (segsum)
       //bound a counter (0-4) to keep track of digit to display 
       //make PORTA an output
-      DDRA = 0xFF;
-      PORTA = 0x00;
+      SET(DDRA);
+      CLEAR(PORTA);
+      CLEAR(PORTB);
       //send 7 segment code to LED segments
-      i = 1;
-      do {
-          PORTB &= ~(i << 5);
-          PORTA |= get_segment(seg_count[i-1]);
-      } while (i < 5);
+      for (i = 4; i < 8; i++) {
+              PORTB |= (1 << i);
+              PORTA = TWO;
+              _delay_ms(1000);
+      }
+       //   PORTA |= get_segment(seg_count[i-1]);
 
       //send PORTB the digit to display
       //update digit to display
