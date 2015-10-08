@@ -269,7 +269,6 @@ int main(int argc, char **argv) {
     ecx = 0;
     eax = 0x07;
     cpuid(&eax, &ebx, &ecx, &edx);
-    for (i 
     printf("max input value %u\n", eax);  
     if (ebx & 0x01) {
         printf("Supports RDFSBASE/RDGSBASE/WRFSBASE/WRGSBASE\n");
