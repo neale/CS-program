@@ -359,7 +359,7 @@ int main(int argc, char **argv) {
 
     eax = 0x80000002;
 
-    /*cpuid(&eax, &ebx, &ecx, &edx);
+    cpuid(&eax, &ebx, &ecx, &edx);
 
     printf("\nCPU Brand String\n");
     printf("%s", (char*)&eax);    
@@ -380,7 +380,6 @@ int main(int argc, char **argv) {
     printf("%s", (char*)&ebx);    
     printf("%s", (char*)&ecx);    
     printf("%s\n", (char*)&edx);
-    */
 
 
     return 0;

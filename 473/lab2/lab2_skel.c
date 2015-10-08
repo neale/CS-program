@@ -14,6 +14,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+#define LIGHTS _SFR_IO8(0x18)
+
 #define ONE 0b10011110;
 #define TWO 0b00100100;
 #define THREE 0b00001100;
@@ -129,7 +131,7 @@ void main() {
     uint8_t i = 0;
     uint16_t count = 0;
     unsigned int seg_count[5] = {0};
-
+    LIGHTS = 0xFF;
     //set port bits 4-7 B as outputs
     DDRB = 0xF0;
     PORTB = 0x00;

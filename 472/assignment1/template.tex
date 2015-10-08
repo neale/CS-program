@@ -112,6 +112,28 @@
 
 \section{Memory heirarchy}
 
+    \\*
+    \\*
+    The memory heirarchy of the computer refers to the arrangement of the memory locations 
+    of the system. The smallest and fastest memory cache is the L1 cache. L1 is further split 
+    into two levels of instruction and data cache, each 128 KiB. The instruction cache contains a block 
+    of opcode that has been fetched from memory. By temporal locality it can be assumed that code
+    that instructions that have been executed recently are more likely to be used again, so having 
+    rencent instructions in the L1 cache allows for increased loop execution. The L1 data cache operates
+    on the same principal, only it stores program data instead of instructions. The L1 data transfer speed
+    reaches 700 GiB/s. 
+    \\
+    The next cache in the heirarchy is the L2 cache. The L2 is a unified data and instruction cache 1 MiB 
+    in size. L2 is a slower and farther away cache than L1, best access speed is 200 GiB/s. The L2 cache 
+    normally feeds data into the L1 cache. 
+    \\
+    The last level found in generally all systems is the L3 cache. This is the largest cache still at 6MiB. 
+    L3 is generally a shared cache between all the cores of the processor. L1 and L2 usually are dedicated to each 
+    core to improve performance. While L3 is a large shared space used as the big-brother backup to the smaller
+    L1 and L2 caches. Access speed of the L3 cache is around 100 GB/s. 
+    \\
+    Some processors have an L4 cache that is the largest at 128 MiB, and acts as just one more level of cache 
+    memory. Beyond this is only main memory.
 
 
 \end{document}
