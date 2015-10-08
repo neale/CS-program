@@ -355,7 +355,34 @@ int main(int argc, char **argv) {
     } else {
         printf("OSPKE unsupported\n");
     }
-    
+
+
+    eax = 0x80000002;
+
+    /*cpuid(&eax, &ebx, &ecx, &edx);
+
+    printf("\nCPU Brand String\n");
+    printf("%s", (char*)&eax);    
+    printf("%s", (char*)&ebx);    
+    printf("%s", (char*)&ecx);    
+    printf("%s", (char*)&edx);
+
+    eax = 0x80000003;
+    cpuid(&eax, &ebx, &ecx, &edx);
+    printf("%s", (char*)&eax);    
+    printf("%s", (char*)&ebx);    
+    printf("%s", (char*)&ecx);    
+    printf("%s", (char*)&edx);
+
+    eax = 0x80000004;
+    cpuid(&eax, &ebx, &ecx, &edx);
+    printf("%s", (char*)&eax);    
+    printf("%s", (char*)&ebx);    
+    printf("%s", (char*)&ecx);    
+    printf("%s\n", (char*)&edx);
+    */
+
+
     return 0;
 }
 
