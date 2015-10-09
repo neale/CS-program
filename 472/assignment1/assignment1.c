@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
     unsigned int cache_level = 0;
     unsigned int ctype = 0;
 // Proc vendor name
-
+    printf("********\t Processor Vendor Name \t********\n\n");
     char vendor[13];
     eax = 0;
 
@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
     char* types[4] = {"Null", "Data", "Instruction", "Unified"};
 
 // L1 instruction cache size (with line info)
+    printf("********\t Memory Heirarchy \t********\n\n");
     for(i = 0; i < 4; i++) {
 
         ecx = i;
@@ -97,7 +98,8 @@ int main(int argc, char **argv) {
         }
     }
 // TLB information (any and all)
-
+    
+    printf("********\t TLB Information \t********\n\n");
     eax = 0x02;
     //TLB info is not returned in specific byte orders
     cpuid(&eax, &ebx, &ecx, &edx);
@@ -199,13 +201,9 @@ int main(int argc, char **argv) {
         }
     }
 
-    printf("ECX: Null byte");
-
-// Memory hierarchy information
-
-
 // physical address width
 
+    printf("********\t Address Width \t********\n\n");
     eax = 0x80000008;
     cpuid(&eax, &ebx, &ecx, &edx);
     printf("\nphysical address width: ");
@@ -214,15 +212,20 @@ int main(int argc, char **argv) {
     printf("\nvirtual address width: ");
     printf("%u\n", (eax >> 8) & 0xFF); 
     
-// logical address width
-
-
 // number of logical CPUs
 
+    printf("********\t Logical CPUs \t********\n\n");
     
+    for (i = 0; i < 2; i++){
+        ecx = i;
+        eax = 0x0B;
+        cpuid(&eax, &ebx, &ecx, &edx);
+        printf("logical cores: %u\n\n", ebx & 0xFF);
+    }
 
 // CPU family
-
+    
+    printf("********\t CPU Family Information \t********\n\n");
     eax = 0x01;
     
     cpuid(&eax, &ebx, &ecx, &edx);
@@ -252,7 +255,8 @@ int main(int argc, char **argv) {
     eax = 0x80000002;
 
 //CPU frequency
-
+    
+    printf("********\t Frequency Information \t********\n\n");
     eax = 0x16;
     
     cpuid(&eax, &ebx, &ecx, &edx);
@@ -265,6 +269,7 @@ int main(int argc, char **argv) {
 
 
 //CPU features available
+    printf("********\t CPU Features \t********\n\n");
     for (i = 0; i < 7; i++) {  
         ecx = i;
         eax = 0x07;
