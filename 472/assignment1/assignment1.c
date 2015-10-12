@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
     printf("\nMax Instruction Value Supported: %x\n\n", eax);
 
 /* Proc vendor name */
+
     printf("\n********\t Processor Vendor Name \t********\n\n");
     char vendor[13];
     eax = 0;
@@ -457,18 +458,15 @@ int main(int argc, char **argv) {
 
     //CPU model (number and name)
 
-    printf("\ncheck if brand string is valid\n");
     eax = 0x80000000;
     cpuid(&eax, &ebx, &ecx, &edx);
-    if (eax > 0x80000004) {
-        printf("necessary instructions included\n");
-        printf("eax > 0x80000004\n\n");
-    }
-    else {
-        printf("Nope, idiot");
+        
+    if (eax >= 0x80000004) {
+        printf("Brand String Supported\n");
+    } else {
+        printf("Brand String Not Supported");
     }
 
-    eax = 0x80000002;
 
 //CPU frequency
     
@@ -489,7 +487,7 @@ int main(int argc, char **argv) {
 
 //CPU features available
     printf("\n********\t CPU Features \t********\n\n");
-    for (i = 0; i < 7; i++) {  
+    for (i = 0; i < 1; i++) {  
         ecx = i;
         eax = 0x07;
         cpuid(&eax, &ebx, &ecx, &edx);
@@ -578,39 +576,42 @@ int main(int argc, char **argv) {
         }
     }
 
-    eax = 0x80000002;
-
-    cpuid(&eax, &ebx, &ecx, &edx);
-    /* switch (eax) {
-        case(0x20202020):
-            break;
-        case(0x20202020):
-            break;
-        case(0x20202020):
-            break;
-        case(
-    */
     printf("\nCPU Brand String\n");
-    printf("%x\n", eax);    
-    printf("%x\n", ebx);    
-    printf("%x\n", ecx);    
-    printf("%x\n", edx);
+    
+    eax = 0x80000002;
+    cpuid(&eax, &ebx, &ecx, &edx);
+     
+    char brand1[17] = {0};
+    memcpy(brand1, (char*)&eax, 4);
+    memcpy(brand1 + 4, (char*)&ebx, 4);
+    memcpy(brand1 + 8, (char*)&ecx, 4);
+    memcpy(brand1 + 12, (char*)&edx, 4);
+    brand1[16] = 0;   
+    printf("%s", brand1);
 
     eax = 0x80000003;
     cpuid(&eax, &ebx, &ecx, &edx);
-    printf("%x\n", eax);    
-    printf("%x\n", ebx);    
-    printf("%x\n", ecx);    
-    printf("%x\n", edx);
-
+ 
+    char brand2[17] = {0};
+    memcpy(brand2, (char*)&eax, 4);
+    memcpy(brand2 + 4, (char*)&ebx, 4);
+    memcpy(brand2 + 8, (char*)&ecx, 4);
+    memcpy(brand2 + 12, (char*)&edx, 4);
+    brand2[16] = 0;   
+    printf("%s", brand2);
+ 
     eax = 0x80000004;
     cpuid(&eax, &ebx, &ecx, &edx);
-    printf("%x\n", eax);    
-    printf("%x\n", ebx);    
-    printf("%x\n", ecx);    
-    printf("%x\n", edx);
-
-
+ 
+    char brand3[17] = {0};
+    memcpy(brand3, (char*)&eax, 4);
+    memcpy(brand3 + 4, (char*)&ebx, 4);
+    memcpy(brand3 + 8, (char*)&ecx, 4);
+    memcpy(brand3 + 12, (char*)&edx, 4);
+    brand3[16] = 0;   
+    printf("%s\n", brand3);
+    printf("%s\n", brand3);
+    
     return 0;
 }
 
