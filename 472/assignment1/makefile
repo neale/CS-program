@@ -1,14 +1,9 @@
 TARGET = template
-HTML = main_html
 
 default: pdf
 
-both: pdf html
-
 dvi: ${TARGET}.tex
 	latex ${TARGET}.tex
-#	bibtex ${TARGET}
-	#latex ${TARGET}.tex
 
 ps: dvi
 	dvips -R -Poutline -t letter ${TARGET}.dvi -o ${TARGET}.ps
