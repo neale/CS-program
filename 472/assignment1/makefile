@@ -1,14 +1,7 @@
 TARGET = template
-<<<<<<< HEAD
 HTML = main_html
 default: pdf
 
-both: pdf 
-=======
-
-default: pdf
-
->>>>>>> 16310d69af0230d4d11ae76a591c7d80c41d221c
 dvi: ${TARGET}.tex
 	latex ${TARGET}.tex
 
