@@ -1,48 +1,32 @@
-TEX	= latex -shell-escape
-BIBTEX	= bibtex
-DVIPS	= dvips
-DVIPDF  = dvipdft
-XDVI	= xdvi -gamma 4
-GH		= gv
+TARGET = template
+HTML = main_html
 
-EXAMPLES = $(wildcard *.c)
-SRC	:= template.tex #$(shell egrep -l '^[^%]*\\begin\{document\}' *.tex)
-TRG	= $(SRC:%.tex=%.dvi)
-PSF	= $(SRC:%.tex=%.ps)
-PDF	= $(SRC:%.tex=%.pdf)
+default: pdf
 
-pdf: $(PDF)
+both: pdf html
 
-ps: $(PSF)
+dvi: ${TARGET}.tex
+	latex ${TARGET}.tex
+#	bibtex ${TARGET}
+	#latex ${TARGET}.tex
 
-$(TRG): %.dvi: %.tex $(EXAMPLES)
-	#one way of including source code is to use pygments
-	#pygmentize -f latex -o __${EXAMPLES}.tex ${EXAMPLES}
-	#requires that you \include{pygments.tex} in your preamble
+ps: dvi
+	dvips -R -Poutline -t letter ${TARGET}.dvi -o ${TARGET}.ps
 
-	$(LATEX) $<
-	$(BIBTEX) $(<:%.tex=%)
-	$(LATEX) $<
-	$(LATEX) $<
-	#remove the pygmentized output to avoid cluttering up the directory
-	#rm __${EXAMPLES}.tex
+pdf: ps
+	ps2pdf ${TARGET}.ps
 
+clean-dvi:
+	rm -f ${TARGET}.aux
+	rm -f ${TARGET}.log
+	rm -f ${TARGET}.dvi
+	rm -f ${TARGET}.out
 
-$(PSF):%.ps: %.dvi
-	$(DVIPS) -R -Poutline -t letter $< -o $@
+clean-ps: clean-dvi
+	rm -f ${TARGET}.ps
 
-$(PDF): %.pdf: %.ps
-	ps2pdf $<
+clean-pdf: clean-ps
+	rm -f ${TARGET}.pdf
 
-show: $(TRG)
-	@for i in $(TRG) ; do $(XDVI) $$i & done
+clean: clean-pdf
 
-showps: $(PSF)
-	@for i in $(PSF) ; do $(GH) $$i & done
-
-all: pdf
-
-clean:
-	rm -f *.pdf *.ps *.dvi *.out *.log *.aux *.bbl *.blg *.pyg
-
-.PHONY: all show clean ps pdf showps

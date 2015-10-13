@@ -137,7 +137,6 @@ void main() {
     uint16_t count = 0;
     unsigned int seg_count[5] = {0};
     //set port bits 4-7 B as outputs
-    DDRE = (1 << PE1);
     DDRB = 0xFF;
     PORTB = 0x00;
 
@@ -145,12 +144,11 @@ void main() {
     while(1){
 
       //insert loop delay for debounce
+      
       _delay_ms(2);
       
-      PORTE &= ~(1 << PB1);
-      //PORTB &= ~(1 << PB3);
       //make PORTA an input port with pullups 
-      CLEAR(DDRA);
+      CLEAR(DDRA); 
       //enable tristate buffer for pushbutton switches
       //bound the count to 0 - 1023
       count += __builtin_popcount(PINA);
@@ -160,13 +158,12 @@ void main() {
       }
       
       SET(DDRA);
+      SET(PORTA);
       segsum(count, seg_count);
       //break up the disp_value to 4, BCD digits in the array: call (segsum)
       //bound a counter (0-4) to keep track of digit to display 
       //make PORTA an output
       //send 7 segment code to LED segments
-
-      PORTE |= (1 << PB1);
 
       PORTB = DIG_FOUR;
       _delay_ms(3);
