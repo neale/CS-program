@@ -16,16 +16,22 @@
 
 #define LIGHTS _SFR_IO8(0x18)
 
-#define ONE 0b10011110;
-#define TWO 0b00100100;
-#define THREE 0b00001100;
-#define FOUR 0b10011000;
-#define FIVE 0b01001000;
-#define SIX 0b01000000;
-#define SEVEN 0b00011110;
-#define EIGHT 0b00000000;
-#define NINE 0b00001000;
-#define ZERO 0b00000010;
+#define DIG_ONE 0x00
+#define DIG_TWO 0x10
+#define COLON 0x20
+#define DIG_THREE 0x30
+#define DIG_FOUR 0x40
+
+#define ONE   0b11111001
+#define TWO   0b10100100
+#define THREE 0b10110000
+#define FOUR  0b10011001
+#define FIVE  0b10010010
+#define SIX   0b10000010
+#define SEVEN 0b11111000
+#define EIGHT 0b10000000
+#define NINE  0b10110000
+#define ZERO  0b11000000
 
 #define CLEAR(x) (x = 0x00)
 #define SET(x) (x = 0xFF)
@@ -114,8 +120,8 @@ void segsum(uint16_t sum, unsigned int *digit_array) {
     digits++;
   } 
   //break up decimal sum into 4 digit-segments
-  digit_array[4] = sum/1000 % 10;
-  digit_array[3] = sum/100 % 10; 
+  digit_array[3] = sum/1000 % 10;
+  digit_array[2] = sum/100 % 10; 
   digit_array[1] = sum/10 % 10;
   digit_array[0] = sum % 10;
 
@@ -128,52 +134,57 @@ void segsum(uint16_t sum, unsigned int *digit_array) {
 //***********************************************************************************
 void main() {
     //int nums = 0;
-    uint8_t i = 0;
     uint16_t count = 0;
     unsigned int seg_count[5] = {0};
-    LIGHTS = 0xFF;
     //set port bits 4-7 B as outputs
-    DDRB = 0xF0;
+    DDRE = (1 << PE1);
+    DDRB = 0xFF;
     PORTB = 0x00;
-    /*while (1) {
-        DDRA = 0xFF;
-        DDRB = 0xFF;
-        PORTB = __builtin_popcount(0b00000001);
-        PORTA = 0x00;
-    }*/
 
+    CLEAR(PORTA);
     while(1){
+
       //insert loop delay for debounce
       _delay_ms(2);
+      
+      PORTE &= ~(1 << PB1);
+      //PORTB &= ~(1 << PB3);
       //make PORTA an input port with pullups 
       CLEAR(DDRA);
-      SET(PORTA);
       //enable tristate buffer for pushbutton switches
-      CLEAR(PORTA);
-      
       //bound the count to 0 - 1023
       count += __builtin_popcount(PINA);
-      
+         
       if (count == 1023) {
           count = 0;
       }
       
+      SET(DDRA);
       segsum(count, seg_count);
       //break up the disp_value to 4, BCD digits in the array: call (segsum)
       //bound a counter (0-4) to keep track of digit to display 
       //make PORTA an output
-      SET(DDRA);
-      CLEAR(PORTA);
-      CLEAR(PORTB);
       //send 7 segment code to LED segments
-      for (i = 4; i < 8; i++) {
-              PORTB |= (1 << i);
-              PORTA = TWO;
-              _delay_ms(1000);
-      }
-       //   PORTA |= get_segment(seg_count[i-1]);
+
+      PORTE |= (1 << PB1);
+
+      PORTB = DIG_FOUR;
+      _delay_ms(3);
+      PORTA = get_segment(seg_count[0]);
+      
+      PORTB = DIG_THREE; 
+      _delay_ms(3);
+      PORTA = get_segment(seg_count[1]);  
+      
+      PORTB = DIG_TWO; 
+      _delay_ms(3);
+      PORTA = get_segment(seg_count[2]);  
+      
+      PORTB = DIG_ONE; 
+      _delay_ms(3);
+      PORTA = get_segment(seg_count[3]);  
 
       //send PORTB the digit to display
       //update digit to display
-      }//while
-    }//main
+    }//while
+}//main
