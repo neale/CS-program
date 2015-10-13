@@ -4,45 +4,45 @@ Collection of work done thorughout the CS program at OSU
 
 ## Collections
 
-* 325 Analysis of Algorithms
+#### 325 Analysis of Algorithms
 
-Graph Theory
+* Graph Theory
 
-Regression
+* Regression
 
-Linear Programming
+* Linear Programming
 
-Time Space Complexity
+* Time Space Complexity
 
-* 344 Operating Systems I
+#### 344 Operating Systems I
 
-Kernel Programming
+* Kernel Programming
 
-PThreads
+* PThreads
 
-Shell Programming
+* Shell Programming
 
-* 472 Computer Architecture II
+#### 472 Computer Architecture II
 
-Security
+* Security
 
-Virtuialization
+* Virtuialization
 
-Vectorization
+* Vectorization
 
-Memory Stack
+* Memory Stack
 
-Computation
+* Computation
 
 
-* 473 Microcontrollers
+#### 473 Microcontrollers
 
-AVR Firmware
+* AVR Firmware
 
-Program Compression
+* Program Compression
 
-Efficient Cycle Usage
+* Efficient Cycle Usage
 
-Electronic System Design
+* Electronic System Design
 
-Flexible Logic
+* Flexible Logic
