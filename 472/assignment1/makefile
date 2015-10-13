@@ -1,10 +1,8 @@
 TARGET = template
 HTML = main_html
-
 default: pdf
 
-both: pdf html
-
+both: pdf 
 dvi: ${TARGET}.tex
 	latex ${TARGET}.tex
 #	bibtex ${TARGET}

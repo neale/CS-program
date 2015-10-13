@@ -610,7 +610,6 @@ int main(int argc, char **argv) {
     memcpy(brand3 + 12, (char*)&edx, 4);
     brand3[16] = 0;   
     printf("%s\n", brand3);
-    printf("%s\n", brand3);
     
     return 0;
 }
