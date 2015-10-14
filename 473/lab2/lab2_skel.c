@@ -35,40 +35,12 @@
 uint8_t debounce_switch(button) {
     
     static uint16_t state[8] = {0}; //holds present state
-    switch (button) {
-        case(0):
-            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
-            break;
-        case(1):
-            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
-            break;
-        case(2):
-            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
-            break;
-        case(3):
-            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
-            break;
-        case(4):
-            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
-            break;
-        case(5):
-            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
-            break;
-        case(6):
-            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
-            break;
-        case(7):
-            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
-        default:
-            break;
-    }
+    state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
     if (state[button] == 0xF000) {
         return 1;
     }
     return 0;
 }
-
-int __builtin_popcount (unsigned int x);
 
 //******************************************************************************
 //                            chk_buttons                                      
@@ -81,7 +53,7 @@ int __builtin_popcount (unsigned int x);
 //
 uint16_t scan(uint16_t count) {
 //******************************************************************************
-    int i = 0;
+    uint8_t i = 0;
     PORTB = 0x70;
     for (i = 0; i < 8; i++) {
         if (debounce_switch(i)) {    
@@ -91,7 +63,7 @@ uint16_t scan(uint16_t count) {
             }
         }
     }
-    SET(PORTB);
+    PORTB = 0x00;
     return count;
 }
 
@@ -141,17 +113,23 @@ uint8_t get_segment(uint8_t bcd) {
 //array is loaded at exit as:  |digit3|digit2|colon|digit1|digit0|
 int segsum(uint16_t count, unsigned int digit_array[]) { 
 
-    int digits = 0;
-    int sum = count;
+    uint8_t i = 0;
+    uint8_t digits = 0;
+    uint8_t sum = count;
+    /* get the number of digits from count */
     while (sum != 0) {
         sum /= 10;
         digits++;
+    }
+    for (i = 0; i < 4; i++) {
+        digit_array[i] = 0;
     }
     //break up decimal sum into 4 digit-segments
     digit_array[0] = count % 10;
     digit_array[1] = count/10 % 10;
     digit_array[2] = count/100 % 10; 
     digit_array[3] = count/1000 % 10;
+    
 
     return digits;
   //blank out leading zero digits 
@@ -159,58 +137,58 @@ int segsum(uint16_t count, unsigned int digit_array[]) {
 }//segment_sum
 //***********************************************************************************
 
-
-
 //***********************************************************************************
 void main() {
+    /* button counter */ 
     uint16_t count = 0;
+    /* holds the seperated digits of count */
     unsigned int seg_count[4] = {0};
+    /* keeps track of which digit is being updated */
+    uint8_t digit = 1;
+    /* how many digits make up count */
     uint8_t digits = 0;
-    //set port bits 4-7 B as outputs
-    int digit = 0;
-    DDRB = 0xF0;
-    CLEAR(PORTB);
+    /* set port bits 4-7 B as outputs */
+    DDRB = 0xF0; 
+    PORTB = 0x00;
     CLEAR(DDRA);
     SET(PORTA);
+
     while(1){
         if (digit > 4) {
-            digit = 0;
+            digit = 1;
         }
-        //insert loop delay for debounce  
+        digits = 0;
+        /* insert loop delay for debounce   */
         _delay_ms(2);
-        //make PORTA an input port with pullups 
-        SET(PORTA);
-        CLEAR(DDRA);
-        //enable tristate buffer for pushbutton switches
-        //bound the count to 0 - 1023
+        /* make PORTA an input port with pullups */ 
+        PORTA = 0xFF;
+        DDRA = 0x00;
+        /* scan buttons for a press */
         count = scan(count);
-       
-       
-        SET(DDRA);
-        SET(DDRB);
-        //break up the disp_value to 4, BCD digits in the array: call (segsum)
         digits = segsum(count, seg_count);
-        //bound a counter (0-4) to keep track of digit to display 
-        //make PORTA an output
-      
-        //send 7 segment code to LED segments
-      
+        /* make PORTA an output */
+        DDRA = 0xFF;
+        /* break up the disp_value to 4, BCD digits in the array: call (segsum) */
+        /*send 7 segment code to LED segments */
         if (digit == 1) {
             PORTB = DIG_ONE;
             PORTA = get_segment(seg_count[0]);  
         }
-        else if ((digit == 2)&&(digits>1)) {
+        else if (digit == 2 && count >= 10) {
             PORTB = DIG_TWO; 
             PORTA = get_segment(seg_count[1]);  
+            
         }
-        else if ((digit == 3)&&(digits>2)) {
+        else if (digit == 3 && count >= 100) {
             PORTB = DIG_THREE; 
             PORTA = get_segment(seg_count[2]);  
+
         }
-        else if ((digit == 4)&&(digits==4)) {
+        else if (digit == 4 && count >= 1000) {
             PORTB = DIG_FOUR;
             PORTA = get_segment(seg_count[3]);
-        }
+        } 
+
         digit++;
         //update digit to display
     }//while
