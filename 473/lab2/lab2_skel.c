@@ -9,16 +9,12 @@
 //  PORTB bit 7 goes to the PWM transistor base.
 
 #define F_CPU 16000000 // cpu speed in hertz 
-#define TRUE 1
-#define FALSE 0
+
 #include <avr/io.h>
 #include <util/delay.h>
 
-#define LIGHTS _SFR_IO8(0x18)
-
 #define DIG_ONE 0x00
 #define DIG_TWO 0x10
-#define COLON 0x20
 #define DIG_THREE 0x30
 #define DIG_FOUR 0x40
 
@@ -30,28 +26,50 @@
 #define SIX   0b10000010
 #define SEVEN 0b11111000
 #define EIGHT 0b10000000
-#define NINE  0b10110000
+#define NINE  0b10010000
 #define ZERO  0b11000000
 
 #define CLEAR(x) (x = 0x00)
 #define SET(x) (x = 0xFF)
 
-//holds data to be sent to the segments. logic zero turns segment on
-uint8_t segment_data[5]; 
-
-//decimal to 7-segment LED display encodings, logic "0" turns on segment
-uint8_t dec_to_7seg[12];
-
-int8_t debounce_switch() {
-  static uint16_t state = 0; //holds present state
-  state = (state << 1) | (! bit_is_clear(PIND, 0)) | 0xE000;
-  if (state == 0xF000) {
-      return 1;
-  }
-  return 0;
+uint8_t debounce_switch(button) {
+    
+    static uint16_t state[8] = {0}; //holds present state
+    switch (button) {
+        case(0):
+            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
+            break;
+        case(1):
+            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
+            break;
+        case(2):
+            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
+            break;
+        case(3):
+            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
+            break;
+        case(4):
+            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
+            break;
+        case(5):
+            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
+            break;
+        case(6):
+            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
+            break;
+        case(7):
+            state[button] = (state[button] << 1) | (! bit_is_clear(PINA, button)) | 0xE000;
+        default:
+            break;
+    }
+    if (state[button] == 0xF000) {
+        return 1;
+    }
+    return 0;
 }
 
 int __builtin_popcount (unsigned int x);
+
 //******************************************************************************
 //                            chk_buttons                                      
 //Checks the state of the button number passed to it. It shifts in ones till   
@@ -61,12 +79,22 @@ int __builtin_popcount (unsigned int x);
 //Expects active low pushbuttons on PINA port.  Debounce time is determined by 
 //external loop delay times 12. 
 //
-uint8_t chk_buttons(uint8_t button) {
+uint16_t scan(uint16_t count) {
 //******************************************************************************
-    while(!button) {
-        debounce_switch();
+    int i = 0;
+    PORTB = 0x70;
+    for (i = 0; i < 8; i++) {
+        if (debounce_switch(i)) {    
+            count += (1 << i);
+            if (count > 1023) {
+                count -= 1023;
+            }
+        }
     }
+    SET(PORTB);
+    return count;
 }
+
 uint8_t get_segment(uint8_t bcd) {
 
     switch (bcd) {
@@ -111,77 +139,79 @@ uint8_t get_segment(uint8_t bcd) {
 //takes a 16-bit binary input value and places the appropriate equivalent 4 digit 
 //BCD segment code in the array segment_data for display.                       
 //array is loaded at exit as:  |digit3|digit2|colon|digit1|digit0|
-void segsum(uint16_t sum, unsigned int *digit_array) {
-  
-  int digits = 0;
-  //determine how many digits there are 
-  while (sum != 0) {
-    sum /= 10;
-    digits++;
-  } 
-  //break up decimal sum into 4 digit-segments
-  digit_array[3] = sum/1000 % 10;
-  digit_array[2] = sum/100 % 10; 
-  digit_array[1] = sum/10 % 10;
-  digit_array[0] = sum % 10;
+int segsum(uint16_t count, unsigned int digit_array[]) { 
 
+    int digits = 0;
+    int sum = count;
+    while (sum != 0) {
+        sum /= 10;
+        digits++;
+    }
+    //break up decimal sum into 4 digit-segments
+    digit_array[0] = count % 10;
+    digit_array[1] = count/10 % 10;
+    digit_array[2] = count/100 % 10; 
+    digit_array[3] = count/1000 % 10;
+
+    return digits;
   //blank out leading zero digits 
   //now move data to right place for misplaced colon position
 }//segment_sum
 //***********************************************************************************
 
 
+
 //***********************************************************************************
 void main() {
-    //int nums = 0;
     uint16_t count = 0;
-    unsigned int seg_count[5] = {0};
+    unsigned int seg_count[4] = {0};
+    uint8_t digits = 0;
     //set port bits 4-7 B as outputs
-    DDRB = 0xFF;
-    PORTB = 0x00;
-
-    CLEAR(PORTA);
+    int digit = 0;
+    DDRB = 0xF0;
+    CLEAR(PORTB);
+    CLEAR(DDRA);
+    SET(PORTA);
     while(1){
-
-      //insert loop delay for debounce
+        if (digit > 4) {
+            digit = 0;
+        }
+        //insert loop delay for debounce  
+        _delay_ms(2);
+        //make PORTA an input port with pullups 
+        SET(PORTA);
+        CLEAR(DDRA);
+        //enable tristate buffer for pushbutton switches
+        //bound the count to 0 - 1023
+        count = scan(count);
+       
+       
+        SET(DDRA);
+        SET(DDRB);
+        //break up the disp_value to 4, BCD digits in the array: call (segsum)
+        digits = segsum(count, seg_count);
+        //bound a counter (0-4) to keep track of digit to display 
+        //make PORTA an output
       
-      _delay_ms(2);
+        //send 7 segment code to LED segments
       
-      //make PORTA an input port with pullups 
-      CLEAR(DDRA); 
-      //enable tristate buffer for pushbutton switches
-      //bound the count to 0 - 1023
-      count += __builtin_popcount(PINA);
-         
-      if (count == 1023) {
-          count = 0;
-      }
-      
-      SET(DDRA);
-      SET(PORTA);
-      segsum(count, seg_count);
-      //break up the disp_value to 4, BCD digits in the array: call (segsum)
-      //bound a counter (0-4) to keep track of digit to display 
-      //make PORTA an output
-      //send 7 segment code to LED segments
-
-      PORTB = DIG_FOUR;
-      _delay_ms(3);
-      PORTA = get_segment(seg_count[0]);
-      
-      PORTB = DIG_THREE; 
-      _delay_ms(3);
-      PORTA = get_segment(seg_count[1]);  
-      
-      PORTB = DIG_TWO; 
-      _delay_ms(3);
-      PORTA = get_segment(seg_count[2]);  
-      
-      PORTB = DIG_ONE; 
-      _delay_ms(3);
-      PORTA = get_segment(seg_count[3]);  
-
-      //send PORTB the digit to display
-      //update digit to display
+        if (digit == 1) {
+            PORTB = DIG_ONE;
+            PORTA = get_segment(seg_count[0]);  
+        }
+        else if ((digit == 2)&&(digits>1)) {
+            PORTB = DIG_TWO; 
+            PORTA = get_segment(seg_count[1]);  
+        }
+        else if ((digit == 3)&&(digits>2)) {
+            PORTB = DIG_THREE; 
+            PORTA = get_segment(seg_count[2]);  
+        }
+        else if ((digit == 4)&&(digits==4)) {
+            PORTB = DIG_FOUR;
+            PORTA = get_segment(seg_count[3]);
+        }
+        digit++;
+        //update digit to display
     }//while
 }//main
