@@ -4,7 +4,7 @@ INPUT=$2
 
 # checks if any argument contains a file then assigns it to INPUT
 if [ $# -ne 2 ]; then
-    if [[ $# -eq 0 ]] || [[ $# -gt 2 ]]; then
+    if [ $# -eq 0 ]; then
       echo -e "Usage: stats {-rows|-cols} [file]"; exit 0
     fi
     [ $# -ge 1 -a -f "$1" ] && INPUT="$1" || INPUT="-"
