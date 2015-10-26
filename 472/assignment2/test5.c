@@ -23,7 +23,7 @@ typedef union {
 typedef union {
 
     char c[16];
-    typedef struct {
+    struct {
         uint64_t high;
         uint64_t low;
     } interior;
@@ -50,7 +50,7 @@ void part3(void) {
     printf("mantissa :       %lf\n", result);
     int sign = (test.d > 0) ? 1 : ((test.d < 0) ? -1 : 0);
     printf("sign :           %d\n", sign);
-    printf("exponent :       %d\n\n", exponent);
+    printf("exponent :       %d\n", exponent);
     puts("longs\n");
     printf("value :          %ld\n", test.l); 
     sign = (test.l > 0) ? 1 : ((test.l < 0) ? -1 : 0);
@@ -80,24 +80,18 @@ double my_frexp(double x, int *exponent) {
     }
     test.d = x;
 
-    printf("total : %llu\n",test.dcast);
-    uint64_t exp = (test.dcast >> 52) & 0x7ff;
+    uint64_t exp = GET_EXP(test.dcast);
     uint64_t sign = test.dcast >> 63;
-    uint64_t mantissa = test.dcast & 0xfffffffffffff;
-    uint64_t exp_bias = exp - 1023 + 1; 
-    uint64_t zero = 0x7ff;
-    *exponent = exp_bias;
+    uint64_t mantissa = GET_MAN(test.dcast);
+    
+    while (mantissa < IMPLICIT) {
+        mantissa <<=1;
+        exp--;
+    }
+    *exponent = exp + 1;
+    mantissa &= ~IMPLICIT;
     //thing we want to plug into the original uint64_t 
-    test.dcast &= ~(zero << 52);
-    printf("zero        : %llu\n", zero);
-    printf("exp_bias    : %llu\n", exp_bias);
-    printf("zeroed test : %llu\n", test.dcast);
-    test.dcast |= (exp_bias << 52);
-    printf("added test : %llu\n", test.dcast);
-    printf("added fuckery : %.20lf\n", test.d);
-    uint64_t new = (sign << 63 | exp_bias << 52 | mantissa);
-    printf("fuck : %.20lf\n", (double) new);
-
+    test.dcast = (sign & SIGN_MASK) | ((exp << 52)& EXP_MASK )| ((mantissa) & MAN_MASK);
     return test.d;
 }
 
@@ -142,13 +136,13 @@ double frexp_test(double x, int *exponent) {
 
 double add(double x, double y) {
 
-    char_cast a, b;
+    char_cast a, b, z;
     a.d = x;
     b.d = y;
     uint64_t afraction = GET_MAN(a.dcast) | IMPLICIT;
     uint64_t bfraction = GET_MAN(b.dcast) | IMPLICIT;
-    uint64_t aexp = GET_EXP(a.dcast) + 1 - 1023;
-    uint64_t bexp = GET_EXP(b.dcast) + 1 - 1023;
+    uint64_t aexp = GET_EXP(a.dcast);
+    uint64_t bexp = GET_EXP(b.dcast);
     unsigned int asign = GET_SIGN(a.dcast);
     unsigned int bsign = GET_SIGN(b.dcast);
     uint64_t minfraction = 0;
@@ -176,7 +170,14 @@ double add(double x, double y) {
 
     int exp_diff = maxexp - minexp;
     minfraction >>= exp_diff;
-
+    minexp += exp_diff;
+    minfraction += maxfraction;
+    while ((minfraction >> 52) > 1) {
+        minfraction >>= 1;
+        maxexp += 1;
+    }
+    z.dcast = (maxsign & SIGN_MASK) | ((maxexp << 52)& EXP_MASK )| ((minfraction) & MAN_MASK);
+    printf("\n%lf + %lf = %lf\n\n", x, y, z.d);
     return 0;
 }
 
@@ -185,6 +186,7 @@ double subtract(double x, double y) {
     char_cast a, b, z;
     a.d = x;
     b.d = y;
+    int sign_change;
     uint64_t afraction = GET_MAN(a.dcast) | IMPLICIT;
     uint64_t bfraction = GET_MAN(b.dcast) | IMPLICIT;
     uint64_t aexp = GET_EXP(a.dcast);
@@ -215,11 +217,9 @@ double subtract(double x, double y) {
     int exp_diff = maxexp - minexp;
     minfraction >>= exp_diff;
     if (minsign == maxsign) {
-        puts(" SIGN MATCH: SUBTRACT YFRACTION FROM XFRACTION");
         maxfraction -= minfraction;
         sign_change = 1;
     } else {
-        puts("SIGN MISMATCH: SUBTRACT XFRACTION FROM YFRACTION");
         maxfraction += minfraction;
         sign_change = 0;
     }
@@ -229,10 +229,10 @@ double subtract(double x, double y) {
         maxfraction <<= 1;
         maxexp -= 1;
     }
-    if (sign_change = 1) {
+    if (sign_change == 1) {
         z.dcast = (maxsign & SIGN_MASK) | ((maxexp << 52)& EXP_MASK )| ((maxfraction) & MAN_MASK);
     } else {
-        z.dcast = (maxsign & SIGN_MASK) | ((maxexp << 52)& EXP_MASK )| ((maxfraction) & MAN_MASK);
+        z.dcast = (~maxsign & SIGN_MASK) | ((maxexp << 52)& EXP_MASK )| ((maxfraction) & MAN_MASK);
     }
     printf("\n%lf - %lf = %lf\n\n", x, y, z.d);
     return z.d;
@@ -241,57 +241,61 @@ double subtract(double x, double y) {
 
 double multiply(double x, double y) {
 
-    char_cast a, b, c, z;
+    char_cast a, b, z;
     a.d = x;
     b.d = y;
-    int i = 0;
-    uint64_t afraction = GET_MAN(a.dcast);
-    uint64_t bfraction = GET_MAN(b.dcast);
-    uint64_t aexp = GET_EXP(a.dcast) + 1 - 1023;
-    uint64_t bexp = GET_EXP(b.dcast) + 1 - 1023;
+    uint64_t afraction = GET_MAN(a.dcast) | IMPLICIT;
+    uint64_t bfraction = GET_MAN(b.dcast) | IMPLICIT;
+    uint64_t aexp = GET_EXP(a.dcast) - 1023;
+    uint64_t bexp = GET_EXP(b.dcast) - 1023;
     unsigned int asign = GET_SIGN(a.dcast);
     unsigned int bsign = GET_SIGN(b.dcast);
     uint64_t zsign = (asign + bsign) % 2;
     uint64_t zexp = aexp + bexp;
-    c.d = afraction * bfraction;
-    uint64_t zfraction = c.dcast;
-    printf("afrac : %llu\n", afraction);
-    printf("bfrac : %llu\n", bfraction);
-    printf("zfrac : %lf\n", c.d);
-    while ((zfraction >> 53) > 1) {
-        zfraction >>= 1;
+    really_long mul = afraction * bfraction;
+    uint64_t zfraction;
+    while ((mul >> 52) > 1) {
+        mul >>= 1;
         zexp += 1;
+        printf("mul : %lld\n", mul);
     }
-    
-    printf("zexp : %llu\n", zexp);
-    printf("zfrac : %llu\n", zfraction);
-    printf("zsign : %llu\n", zsign);
-    z.dcast |= (zsign << 63) | (zexp << 52) | (zfraction);
-    printf("z float: %lf\n", z.d);
+    zfraction = mul;
+    printf("zfrac %llu\n", zfraction);
+    printf("exp %llu\n", zexp);
+    zexp += 1023;
+    z.dcast = (zsign & SIGN_MASK) | ((zexp << 52) & EXP_MASK) | ((zfraction) & MAN_MASK);
+    printf("\n%lf * %lf = %lf\n\n", x, y, z.d);
     return z.d;
 }
 
+double _sqrt(double x){
+    double low = 0.0000001;
+    
+    double y = 1.0;
+    
+    while(fabs((x/y) - y) > low ){
+        y= (y + x/y) / 2.0;
+    }
+    printf("sqrt(%lf) = %lf\n", x, y);
+    return y;
+}
 int main() {
-    printf("size : %d\n", sizeof(really_long));
+    printf("size : %lu\n", sizeof(really_long));
     double this = -3234.4;
-    double fuckkk;
-    double man, fuck, damn;
-    int shit;
     int another, one_more;
-    damn = my_frexp(this, &one_more);
-    fuckkk = frexp_test(this, &shit);
-    fuck = -3234.4;
-    man = frexp(fuck, &another);
-    printf("%lf = %lf * 2 ^ %d\n", this, damn, one_more);
-    printf("%lf = %lf * 2 ^ %d\n", this, fuckkk, shit);
-    printf("%lf = %lf * 2 ^ %d\n", fuck, man, another);
-    add(4.5, 3.5);
+    double arg = 4.2;
+    double man = frexp(arg, &another);
+    printf("%lf = %lf * 2 ^ %d\n", arg, man, another);
     part3();
-    double sub = subtract(4.2, 1.1);
-    printf("\nsub : %lf\n", sub);
-    double one = 1.5;
-    double two = 1.5;
-    multiply(one, two);
+    add(4.5, 3.5);
+    add(1.2, 3.3);
+    subtract(4.2, 1.1);
+    subtract(3.3, 1.1);
+    multiply(2.2, 2.0);
+    multiply(.5, .5);
+    _sqrt(4);
+    _sqrt(81);
+    _sqrt(5);
     return 0;
 
 }
