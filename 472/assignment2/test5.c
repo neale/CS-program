@@ -4,9 +4,10 @@
 #include <float.h>
 #include <strings.h>
 
-#define GET_EXP(x) ((x >> 52) & 0x7FF)
-#define GET_MAN(x)  (x & 0xFFFFFFFFFFFFF)
+#define GET_EXP(x) ((x >> 52) & 0x7ff)
+#define GET_MAN(x)  (x & 0xfffffffffffff)
 #define GET_SIGN(x) (x >> 63)
+#define IMPLICIT 0x10000000000000
 typedef union {
     double d;
     uint64_t dcast;
@@ -26,27 +27,27 @@ void part3(void) {
     double result;
     pmem test;
     test.d = 1.55;
-    puts("\nPART 3\n\n");
-    puts("DOUBLES :\n");
-    printf("Value in union : %lf\n", test.d);
+    puts("\npart 3\n\n");
+    puts("doubles :\n");
+    printf("value in union : %lf\n", test.d);
     result = frexp(test.d, &exponent);
-    printf("Mantissa :       %lf\n", result);
+    printf("mantissa :       %lf\n", result);
     int sign = (test.d > 0) ? 1 : ((test.d < 0) ? -1 : 0);
-    printf("Sign :           %d\n", sign);
-    printf("Exponent :       %d\n\n", exponent);
-    puts("LONGS\n");
-    printf("Value :          %ld\n", test.l); 
+    printf("sign :           %d\n", sign);
+    printf("exponent :       %d\n\n", exponent);
+    puts("longs\n");
+    printf("value :          %ld\n", test.l); 
     sign = (test.l > 0) ? 1 : ((test.l < 0) ? -1 : 0);
-    printf("Sign :           %d\n", sign);
-    puts("\nChar Array : \n");
-    printf("Hex :            "); 
+    printf("sign :           %d\n", sign);
+    puts("\nchar array : \n");
+    printf("hex :            "); 
     for (i = 0; i < sizeof(double); ++i) {    
         printf("%x", test.c[i]);
     }
     unsigned char ctest[8] = {0};
-    printf("\nChar :           "); 
+    printf("\nchar :           "); 
     for (i = 0; i < 8; i++) {
-        ctest[i] = (test.u >> (i*8)) & 0xFF;
+        ctest[i] = (test.u >> (i*8)) & 0xff;
         printf("%c", ctest[i]);
     }
     printf("\n\n"); 
@@ -64,11 +65,11 @@ double my_frexp(double x, int *exponent) {
     test.d = x;
 
     printf("total : %llu\n",test.dcast);
-    uint64_t exp = (test.dcast >> 52) & 0x7FF;
+    uint64_t exp = (test.dcast >> 52) & 0x7ff;
     uint64_t sign = test.dcast >> 63;
-    uint64_t mantissa = test.dcast & 0xFFFFFFFFFFFFF;
+    uint64_t mantissa = test.dcast & 0xfffffffffffff;
     uint64_t exp_bias = exp - 1023 + 1; 
-    uint64_t zero = 0x7FF;
+    uint64_t zero = 0x7ff;
     *exponent = exp_bias;
     //thing we want to plug into the original uint64_t 
     test.dcast &= ~(zero << 52);
@@ -128,8 +129,8 @@ double add(double x, double y) {
     char_cast a, b;
     a.d = x;
     b.d = y;
-    uint64_t afraction = GET_MAN(a.dcast);
-    uint64_t bfraction = GET_MAN(b.dcast);
+    uint64_t afraction = GET_MAN(a.dcast) | IMPLICIT;
+    uint64_t bfraction = GET_MAN(b.dcast) | IMPLICIT;
     uint64_t aexp = GET_EXP(a.dcast) + 1 - 1023;
     uint64_t bexp = GET_EXP(b.dcast) + 1 - 1023;
     unsigned int asign = GET_SIGN(a.dcast);
@@ -168,8 +169,8 @@ double subtract(double x, double y) {
     char_cast a, b, z;
     a.d = x;
     b.d = y;
-    uint64_t afraction = GET_MAN(a.dcast);
-    uint64_t bfraction = GET_MAN(b.dcast);
+    uint64_t afraction = GET_MAN(a.dcast) | IMPLICIT;
+    uint64_t bfraction = GET_MAN(b.dcast) | IMPLICIT;
     uint64_t aexp = GET_EXP(a.dcast) + 1 - 1023;
     uint64_t bexp = GET_EXP(b.dcast) + 1 - 1023;
     unsigned int asign = GET_SIGN(a.dcast);
@@ -182,7 +183,7 @@ double subtract(double x, double y) {
     unsigned int maxsign = 0;
     uint64_t xoperand, yoperand;
     if (fmin(aexp, bexp) == aexp) {
-        minfraction = afraction;
+        minfraction = afraction; 
         minexp      = aexp;
         minsign     = asign;
         maxfraction = bfraction;
@@ -196,7 +197,6 @@ double subtract(double x, double y) {
         maxexp      = aexp;
         maxsign     = asign;
     }
-
     int exp_diff = maxexp - minexp;
     minfraction >>= exp_diff;
     if (minsign == maxsign) {
@@ -206,21 +206,17 @@ double subtract(double x, double y) {
     }
     
     if (maxfraction == 0) { return 0; }
-    uint64_t test = maxfraction; 
-    double count = 0;
-    while (test > 1) {
-        test = test >> 1;
-        count++;
+    while ((maxfraction >> 52) < 1) {
+        maxfraction <<= 1;
+        maxexp -= 1;
     }
-    uint64_t exp = count;
-    maxfraction *= pow(2, -count);
-    if (127 + count > 0) {
-        z.dcast |= (0llu << 63llu) | (exp << 52) | (maxfraction);
+    if (127 + maxexp > 0) {
+        z.dcast |= (0llu << 63llu) | (maxexp << 52) | (maxfraction);
     } else {
-        z.dcast |= (1llu << 63llu) | (exp << 52) | (maxfraction);
+        z.dcast |= (1llu << 63llu) | (maxexp << 52) | (maxfraction);
     }
     printf("\nsign     : %u\n", maxsign );
-    printf("exponent : %llu\n", exp );
+    printf("exponent : %llu\n", maxexp );
     printf("mantissa : %llu\n", maxfraction );
     printf("xoperand : %llu\n", xoperand );
     return z.d;
