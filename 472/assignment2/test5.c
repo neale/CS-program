@@ -4,14 +4,30 @@
 #include <float.h>
 #include <strings.h>
 
-#define GET_EXP(x) ((x >> 52) & 0x7ff)
-#define GET_MAN(x)  (x & 0xfffffffffffff)
+#define MAN_MASK 0x000FFFFFFFFFFFFFllu
+#define EXP_MASK 0x7FF0000000000000llu
+#define SIGN_MASK     0x8000000000000000llu
+#define GET_EXP(x) ((x >> 52) & 0x7FF)
+#define GET_MAN(x)  (x & 0xFFFFFFFFFFFFFllu)
 #define GET_SIGN(x) (x >> 63)
-#define IMPLICIT 0x10000000000000
+#define IMPLICIT 0x10000000000000llu
+
+typedef int really_long __attribute__ ((mode (TI)));
+
 typedef union {
     double d;
     uint64_t dcast;
 } char_cast;
+
+
+typedef union {
+
+    char c[16];
+    typedef struct {
+        uint64_t high;
+        uint64_t low;
+    } interior;
+} bigint;
 
 typedef union {
     double d;
@@ -171,8 +187,8 @@ double subtract(double x, double y) {
     b.d = y;
     uint64_t afraction = GET_MAN(a.dcast) | IMPLICIT;
     uint64_t bfraction = GET_MAN(b.dcast) | IMPLICIT;
-    uint64_t aexp = GET_EXP(a.dcast) + 1 - 1023;
-    uint64_t bexp = GET_EXP(b.dcast) + 1 - 1023;
+    uint64_t aexp = GET_EXP(a.dcast);
+    uint64_t bexp = GET_EXP(b.dcast);
     unsigned int asign = GET_SIGN(a.dcast);
     unsigned int bsign = GET_SIGN(b.dcast);
     uint64_t minfraction = 0;
@@ -181,7 +197,6 @@ double subtract(double x, double y) {
     uint64_t maxexp = 0;
     unsigned int minsign = 0;
     unsigned int maxsign = 0;
-    uint64_t xoperand, yoperand;
     if (fmin(aexp, bexp) == aexp) {
         minfraction = afraction; 
         minexp      = aexp;
@@ -200,9 +215,13 @@ double subtract(double x, double y) {
     int exp_diff = maxexp - minexp;
     minfraction >>= exp_diff;
     if (minsign == maxsign) {
+        puts(" SIGN MATCH: SUBTRACT YFRACTION FROM XFRACTION");
         maxfraction -= minfraction;
+        sign_change = 1;
     } else {
+        puts("SIGN MISMATCH: SUBTRACT XFRACTION FROM YFRACTION");
         maxfraction += minfraction;
+        sign_change = 0;
     }
     
     if (maxfraction == 0) { return 0; }
@@ -210,15 +229,12 @@ double subtract(double x, double y) {
         maxfraction <<= 1;
         maxexp -= 1;
     }
-    if (127 + maxexp > 0) {
-        z.dcast |= (0llu << 63llu) | (maxexp << 52) | (maxfraction);
+    if (sign_change = 1) {
+        z.dcast = (maxsign & SIGN_MASK) | ((maxexp << 52)& EXP_MASK )| ((maxfraction) & MAN_MASK);
     } else {
-        z.dcast |= (1llu << 63llu) | (maxexp << 52) | (maxfraction);
+        z.dcast = (maxsign & SIGN_MASK) | ((maxexp << 52)& EXP_MASK )| ((maxfraction) & MAN_MASK);
     }
-    printf("\nsign     : %u\n", maxsign );
-    printf("exponent : %llu\n", maxexp );
-    printf("mantissa : %llu\n", maxfraction );
-    printf("xoperand : %llu\n", xoperand );
+    printf("\n%lf - %lf = %lf\n\n", x, y, z.d);
     return z.d;
 
 }
@@ -256,7 +272,7 @@ double multiply(double x, double y) {
 }
 
 int main() {
-
+    printf("size : %d\n", sizeof(really_long));
     double this = -3234.4;
     double fuckkk;
     double man, fuck, damn;
@@ -271,7 +287,7 @@ int main() {
     printf("%lf = %lf * 2 ^ %d\n", fuck, man, another);
     add(4.5, 3.5);
     part3();
-    double sub = subtract(1.5, .5);
+    double sub = subtract(4.2, 1.1);
     printf("\nsub : %lf\n", sub);
     double one = 1.5;
     double two = 1.5;
