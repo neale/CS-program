@@ -210,7 +210,7 @@ double my_sub(double x, double y) {
    char_cast x_union, y_union, diff;
    long x_exp, y_exp; 
    int exp_diff;
-   double temp;
+ a  double temp;
    bool sign_flip_flag = false;
    uint64_t fraction_diff;
    uint64_t x_frac, y_frac;

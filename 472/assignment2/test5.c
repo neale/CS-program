@@ -11,6 +11,14 @@
 #define GET_MAN(x)  (x & 0xFFFFFFFFFFFFFllu)
 #define GET_SIGN(x) (x >> 63)
 #define IMPLICIT 0x10000000000000llu
+#define A 1000000000
+#define B 1000
+static __inline__ unsigned long rdtsc(void) {
+    unsigned a, d;
+    __asm volatile("rdtsc" : "=a" (a), "=d" (d));
+
+    return (((unsigned long)a) | (((unsigned long)d) << 32));
+}
 
 typedef int really_long __attribute__ ((mode (TI)));
 
@@ -83,7 +91,7 @@ double my_frexp(double x, int *exponent) {
     uint64_t exp = GET_EXP(test.dcast);
     uint64_t sign = test.dcast >> 63;
     uint64_t mantissa = GET_MAN(test.dcast);
-    
+
     while (mantissa < IMPLICIT) {
         mantissa <<=1;
         exp--;
@@ -93,45 +101,6 @@ double my_frexp(double x, int *exponent) {
     //thing we want to plug into the original uint64_t 
     test.dcast = (sign & SIGN_MASK) | ((exp << 52)& EXP_MASK )| ((mantissa) & MAN_MASK);
     return test.d;
-}
-
-double frexp_test(double x, int *exponent) {
-
-    char_cast test;
-    if (x == 0) {
-        return 0;
-    } 
-    else if (isnan(x) || isinf(x)) {
-        return x;
-    }
-    test.d = x;
-
-    uint64_t i = 0;
-    uint64_t j = 1;
-
-    uint64_t bit = 0;
-    double fraction = 0;
-    double frac = 0;
-    uint64_t place = 1;
-    double normal_mantissa = 0;
-    uint64_t mantissa = GET_MAN(test.dcast);
-    uint64_t exp = GET_EXP(test.dcast);
-    printf("manta : %llu\n",mantissa);
-    mantissa += 1;
-    for (i = 51; i > 0; i--) {
-        bit = (mantissa >> i) & 0x01;
-        printf("bit : %llu\n",bit);
-
-        printf("j : %llu\n",j);
-        fraction = (double) (place << j);
-        frac = (double) 1 / fraction;
-        normal_mantissa += bit * frac;
-        printf("normal_mantissa : %lf\n",normal_mantissa);
-        j++;
-
-    } 
-    *exponent = exp-1023+1;
-    return ++normal_mantissa/2;
 }
 
 double add(double x, double y) {
@@ -177,7 +146,7 @@ double add(double x, double y) {
         maxexp += 1;
     }
     z.dcast = (maxsign & SIGN_MASK) | ((maxexp << 52)& EXP_MASK )| ((minfraction) & MAN_MASK);
-    printf("\n%lf + %lf = %lf\n\n", x, y, z.d);
+    //printf("\n%lf + %lf = %lf\n\n", x, y, z.d);
     return 0;
 }
 
@@ -223,7 +192,7 @@ double subtract(double x, double y) {
         maxfraction += minfraction;
         sign_change = 0;
     }
-    
+
     if (maxfraction == 0) { return 0; }
     while ((maxfraction >> 52) < 1) {
         maxfraction <<= 1;
@@ -234,68 +203,166 @@ double subtract(double x, double y) {
     } else {
         z.dcast = (~maxsign & SIGN_MASK) | ((maxexp << 52)& EXP_MASK )| ((maxfraction) & MAN_MASK);
     }
-    printf("\n%lf - %lf = %lf\n\n", x, y, z.d);
+    //printf("\n%lf - %lf = %lf\n\n", x, y, z.d);
     return z.d;
 
 }
 
 double multiply(double x, double y) {
 
+    /* 3 unions for extraction and recalculation of floats */
     char_cast a, b, z;
     a.d = x;
     b.d = y;
-    uint64_t afraction = GET_MAN(a.dcast) | IMPLICIT;
-    uint64_t bfraction = GET_MAN(b.dcast) | IMPLICIT;
-    uint64_t aexp = GET_EXP(a.dcast) - 1023;
-    uint64_t bexp = GET_EXP(b.dcast) - 1023;
+    /* extract fractions from a and b, add the leading one */
+    uint64_t afraction = (GET_MAN(a.dcast) | IMPLICIT) << 10;
+    uint64_t bfraction = (GET_MAN(b.dcast) | IMPLICIT) << 11;
+    /* get exponents and subtract biases */
+    uint64_t aexp = GET_EXP(a.dcast);
+    uint64_t bexp = GET_EXP(b.dcast);
     unsigned int asign = GET_SIGN(a.dcast);
     unsigned int bsign = GET_SIGN(b.dcast);
-    uint64_t zsign = (asign + bsign) % 2;
-    uint64_t zexp = aexp + bexp;
+    /* xor the sign bits to get new sign */
+    if (aexp == 0x7FF || bexp == 0x7FF) {
+        puts("NaN or Inf");
+    }
+    uint64_t zsign = asign ^ bsign;
+    /* add the exponents */
+    uint64_t zexp = aexp + bexp - 1023;
+    /* store the overflow in a 128 bit int */
     really_long mul = afraction * bfraction;
     uint64_t zfraction;
-    while ((mul >> 52) > 1) {
-        mul >>= 1;
-        zexp += 1;
-        printf("mul : %lld\n", mul);
+    printf("mul: %lld\n", mul);
+    /* check if the passed in value is equal */
+    /* if there are bits to the left of the radix pt. shift until 1.bbb */
+    uint64_t zfraction0 = mul >> 64;
+    uint64_t zfraction1 = mul & 0xFFFFFFFFFFFFFFFF;
+    zfraction0 |= (zfraction1 != 0);
+
+    while (1 <= (zfraction0 << 1)) {
+        zfraction0 <<= 1;
+        /* and add one to exponent */
+        zexp--;
     }
-    zfraction = mul;
+
+    /* store back into unsigned int */
     printf("zfrac %llu\n", zfraction);
     printf("exp %llu\n", zexp);
-    zexp += 1023;
-    z.dcast = (zsign & SIGN_MASK) | ((zexp << 52) & EXP_MASK) | ((zfraction) & MAN_MASK);
+    /* add back bias */
+    //zexp += 1023;
+    /* logical | back into the union */
+    /* the masks are there in case the value is not 0 */
+    z.dcast = (zsign & SIGN_MASK) | ((zexp << 52) & EXP_MASK) | ((zfraction) >> 10);
     printf("\n%lf * %lf = %lf\n\n", x, y, z.d);
+    /* return the double representation */
     return z.d;
 }
 
 double _sqrt(double x){
-    double low = 0.0000001;
-    
-    double y = 1.0;
-    
-    while(fabs((x/y) - y) > low ){
-        y= (y + x/y) / 2.0;
-    }
-    printf("sqrt(%lf) = %lf\n", x, y);
+
+    long i;
+    double x2, y;
+    const double z = 1.5F;
+
+    x2 = x * 0.5F;
+    y  = x;
+    i  = * (long * ) &y;                       // evil floating point bit level hacking
+    i  = 0x5fe6eb50c7b537a9 - ( i >> 1 );               // what the fuck? 
+    y  = * ( double * ) &i;
+    y  = y * ( z - ( x2 * y * y ) );   // 1st iteration
+    y  = y * ( z - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+    y  = y * ( z - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+
+    printf("\nsqrt(%lf) = %lf\n\n", x, 1/y);
     return y;
+
 }
 int main() {
-    printf("size : %lu\n", sizeof(really_long));
-    double this = -3234.4;
-    int another, one_more;
+
+    //int i = 0;
+    int another = 0;
     double arg = 4.2;
     double man = frexp(arg, &another);
     printf("%lf = %lf * 2 ^ %d\n", arg, man, another);
-    part3();
+    //part3();
     add(4.5, 3.5);
     add(1.2, 3.3);
-    subtract(4.2, 1.1);
-    subtract(3.3, 1.1);
+
+    /*    unsigned long a = rdtsc();
+          for (i = 0; i < A; i++) {    
+          add(4.5, 3.5);
+          }
+          unsigned long b = rdtsc();
+
+          unsigned long c = rdtsc();
+          for (i = 0; i < B; i++) {    
+          4.5 + 3.5;
+          }
+          unsigned long d = rdtsc();
+          unsigned long e = b - a;
+          unsigned long f = d - c;
+          unsigned long ticks = (e - f)/(A - B);
+
+          subtract(4.2, 1.1);
+          subtract(3.3, 1.1);
+          puts("sub\n");
+          a = rdtsc();
+          for (i = 0; i < A; i++) {    
+          subtract(3.3, 1.1);
+          }
+          b = rdtsc();
+
+          c = rdtsc();
+          for (i = 0; i < B; i++) {    
+          3.3 - 1.1;
+          }
+          d = rdtsc();
+          e = b - a;
+          f = d - c;
+          ticks = (e - f)/(A - B);
+
+          puts("mul\n");
+          rdtsc();
+          a = rdtsc();
+          for (i = 0; i < A; i++) {    
+          multiply(2.2, 2.0);
+          }
+          b = rdtsc();
+
+          c = rdtsc();
+          for (i = 0; i < B; i++) {    
+          2.2 * 2.0;
+          }
+          d = rdtsc();
+          e = b - a;
+          f = d - c;
+          ticks = (e - f)/(A - B);
+
+*/ 
     multiply(2.2, 2.0);
+    multiply(9.0, 9.0);
     multiply(.5, .5);
-    _sqrt(4);
-    _sqrt(81);
-    _sqrt(5);
+    /*
+       puts("sqrt");
+       a = rdtsc();
+       for (i = 0; i < A; i++) {    
+       _sqrt(5);
+       }
+       b = rdtsc();
+
+       c = rdtsc();
+       for (i = 0; i < B; i++) {    
+       sqrt(5);
+       }
+       d = rdtsc();
+       e = b - a;
+       f = d - c;
+       ticks = (e - f)/(A - B);
+
+    */
+       _sqrt(4);
+       _sqrt(5);
+       
     return 0;
 
 }
