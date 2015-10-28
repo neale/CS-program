@@ -1,4 +1,4 @@
-PRG            =lab3
+PRG            =test
 #PRG            =led_display_test
 
 OBJ            = $(PRG).o
@@ -27,7 +27,7 @@ clean:
 #setup for for USB programmer
 #may need to be changed depending on your programmer
 program: $(PRG).hex
-	sudo avrdude -F -c avrispmkII -p m128 -e -U flash:w:$(PRG).hex  -v
+	sudo avrdude -F -c usbasp -p m128 -e -U flash:w:$(PRG).hex  -v
 
 lst:  $(PRG).lst
 
