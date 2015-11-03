@@ -283,7 +283,9 @@ int main(int argc, char **argv) {
     
     unsigned int tlb = 0;
     unsigned int hex_code = 0;
+    int k = 0;
     eax = 0x02;
+
     
     if (0x02 <= max_instruction) {
     //TLB info is not returned in specific byte orders
@@ -299,7 +301,7 @@ int main(int argc, char **argv) {
             printf("Register map : %x\n\n", tlb); 
             
             /* loops each individual one */
-            for(int k = 0; k < sizeof(tlb); k++) { 
+            for(k = 0; k < sizeof(tlb); k++) { 
                 
                 hex_code = (tlb >> 8*k) & 0xFF;
                 
@@ -613,4 +615,5 @@ int main(int argc, char **argv) {
     
     return 0;
 }
+
 
