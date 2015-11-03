@@ -226,9 +226,9 @@ int scan_encoders(int count) {
     if (encoder1A && encoder1B) {
         if (!encoder1_shift) {
             if (!clkwise1) {
-                cnt -= multiplier; 
+                count -= multiplier;
             } else {
-                cnt += multiplier;
+                count += multiplier; 
             }
             encoder1_shift = TRUE;
         }
@@ -236,15 +236,15 @@ int scan_encoders(int count) {
     if (encoder2A && encoder2B) {
         if (!encoder2_shift) {
             if (!clkwise2) {
-                cnt -= multiplier;
+                count -= multiplier;
             } else {
-                cnt += multiplier;
+                count += multiplier;
             }
             encoder2_shift = TRUE;
         }
     } //else { cnt += 10; } 
     /* return the count variable */  
-    return cnt;
+    return count;
 }
 uint8_t get_segment(uint8_t bcd) {
 
