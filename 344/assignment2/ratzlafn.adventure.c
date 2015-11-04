@@ -331,13 +331,6 @@ int main(int argc, char **argv) {
     PLAYYYYY(&neale, rooms);         //middle game
     end_room_display(&neale);        //end game
     
-    /* cleanup files and directory */
-    /* dir must be empty before it can be deleted */
-    for (i = 0; i < 8; i++) {     
-        remove(rooms[i].name);
-    }
-    chdir("../");
-    remove(dirname);
     /* exit with code 0 */
     return 0;
 }
