@@ -1,6 +1,8 @@
 // lab2_skel.c 
 // Neale Ratzlaff
 // 9.12.08
+// 7986
+// am798
 
 #define F_CPU 16000000 // cpu speed in hertz 
 
@@ -224,9 +226,9 @@ int scan_encoders(int count) {
     if (encoder1A && encoder1B) {
         if (!encoder1_shift) {
             if (!clkwise1) {
-                count -= multiplier;
+                cnt -= multiplier; 
             } else {
-                count += multiplier; 
+                cnt += multiplier;
             }
             encoder1_shift = TRUE;
         }
@@ -234,15 +236,15 @@ int scan_encoders(int count) {
     if (encoder2A && encoder2B) {
         if (!encoder2_shift) {
             if (!clkwise2) {
-                count -= multiplier;
+                cnt -= multiplier;
             } else {
-                count += multiplier;
+                cnt += multiplier;
             }
             encoder2_shift = TRUE;
         }
     } //else { cnt += 10; } 
     /* return the count variable */  
-    return count;
+    return cnt;
 }
 uint8_t get_segment(uint8_t bcd) {
 
@@ -334,6 +336,8 @@ ISR(TIMER0_COMP_vect) {
     static uint8_t digits = 0;
     static uint8_t digit = 1;
     static int diff = 0;
+    static int low = 0;
+    static int high = 0;
     //states for bar graph
     DDRA = 0x00;
     PORTA = 0xFF;
@@ -343,6 +347,18 @@ ISR(TIMER0_COMP_vect) {
     diff = scan_encoders(count);
     count += diff;
     DDRA = 0xFF;
+    DDRB |= (1 << PB7);
+    ADCSRA |= (1 << ADSC);
+    while (!ADCSRA & (1 << ADIF)) {}
+    low = ADCL;
+    high = (ADCH << 8) | low;
+    ADCSRA |=  (1 << ADIF);
+    if (high == 0) {
+        OCR2 = 123;
+    }
+    else {
+        OCR2 = 15;
+    }
     if (count > 1023) {
         count -= 1023;
     }
@@ -375,11 +391,25 @@ ISR(TIMER0_COMP_vect) {
 }
 
 //Initialize Timer/Counter 0
-void init_clk0() {
+void init_clk() {
     ASSR |= (1<<AS0); //use ext oscillator
     TCCR0 |= (1<<CS00) | (1<<WGM01); //start clock no prescale with CTC mode
     TIMSK |= (1<<OCIE0); //enable output compare match interrupt
     OCR0 = 128;
+
+    TCCR2 |= (1 << WGM20) | (1 << WGM21) | (1 << CS20) | (1 << CS21);
+    TCCR2 |= (1 << COM21);
+    OCR2 = 128;   
+}
+/* initialize to 125 kHz (datasheet), using VCC for reference,
+ * 8 bit resolution, and then do the first conversion (init) 
+ */
+void init_adc() {
+
+    DDRF   &= ~(1 << PF0);
+    ADCSRA |=  (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2);
+    ADMUX  |=  (1 << REFS0);        
+    ADCSRA |=  (1 << ADEN); // do the first conversion
 }
 
 void init_spi() {
@@ -389,7 +419,6 @@ void init_spi() {
 
 }
 
-
 uint8_t main() {
 
     DDRB = 0xF7;
@@ -398,7 +427,7 @@ uint8_t main() {
     SET(PORTA); 
     
     init_spi();
-    init_clk0();
+    init_clk();
     sei();
     while(1){}
     cli();
