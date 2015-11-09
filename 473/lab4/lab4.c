@@ -10,10 +10,11 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 
-#define DIG_ONE 0x01
-#define DIG_TWO 0x11
+#define DIG_ONE   0x01
+#define DIG_TWO   0x11
 #define DIG_THREE 0x31
-#define DIG_FOUR 0x41
+#define DIG_FOUR  0x41
+#define COLON     0x21 
 
 #define LENC_FWD_1 SPDR & 0xFE
 #define LENC_FWD_2 SPDR & 0xFC
@@ -64,6 +65,19 @@
 #define BAR_N PORTB |= (1<<PB0);PORTD |=(1<<PD4)
 #define ENC_EN PORTB |=(1<<PB0);PORTE &=~(1<<PE6)
 #define ENC_N PORTE |= (1 << PE6)
+
+typedef struct {
+
+    uint8_t hoursH;
+    uint8_t hoursL;
+    uint8_t minutesH;
+    uint8_t minutesL;
+    uint16_t seconds;
+    uint8_t type;
+
+} Clock;
+
+Clock clock = {0};  
 
 /* holds the seperated digits of count */
 unsigned int seg_count[4] = {0};
@@ -336,39 +350,135 @@ ISR(TIMER0_COMP_vect) {
     static uint8_t digits = 0;
     static uint8_t digit = 1;
     static int diff = 0;
-    static int low = 0;
-    static int high = 0;
+    clock.seconds++;
+    if (clock.seconds == 60000) {
+        clock.seconds = 0;
+        clock.minutesL++;
+    }
+    if (clock.minutesL == 10) {
+        clock.minutesL = 0;
+        clock.minutesH++;
+    }
+    if (clock.minutesH == 6) {
+        clock.minutesH = 0;
+        clock.minutesL = 0;
+        clock.hoursL++;
+    }
+    if (clock.hoursH == 2 && clock.hoursL == 4) {
+        clock.hoursH = 0;
+        clock.hoursL = 0;
+    }
+    else if (clock.hoursL == 10) {
+        clock.hoursL = 0;
+        clock.hoursH++;
+    } 
     //states for bar graph
     DDRA = 0x00;
     PORTA = 0xFF;
     scan();
-    digits = segsum(count, seg_count);
-    diff = 0;
-    diff = scan_encoders(count);
-    count += diff;
-    DDRA = 0xFF;
-    DDRB |= (1 << PB7);
     ADCSRA |= (1 << ADSC);
     while (!ADCSRA & (1 << ADIF)) {}
-    low = ADCL;
-    high = (ADCH << 8) | low;
     ADCSRA |=  (1 << ADIF);
-    if (high == 0) {
-        OCR2 = 123;
+    //digits = segsum(count, seg_count);
+    //diff = 0;
+    //diff = scan_encoders(count);
+    //count += diff;
+    DDRA = 0xFF;
+    count = ADCH; 
+    if (count > 200) {
+        OCR2 = 250;
+    } else if (count > 150) {
+        OCR2 = 192;
+    } else if (count > 100) {
+        OCR2 = 128;
+    } else if (count > 50) {
+        OCR2 = 64;
+    } else {
+        OCR2 = 10;
     }
-    else {
-        OCR2 = 15;
-    }
-    if (count > 1023) {
+    /*if (count > 1023) {
         count -= 1023;
     }
     else if (count < 0) {
         count += 1023;
-    }
-    if (digit > 4) {
+    }*/
+    if (digit > 5) {
         digit = 1;
     }
     if (digit == 1) {
+        PORTB = DIG_FOUR;
+        PORTA = get_segment(clock.hoursH);  
+    }
+    else if (digit == 2) {
+        PORTB = DIG_THREE; 
+        PORTA = get_segment(clock.hoursL);  
+
+    }
+    else if (digit == 3) {
+        PORTB = DIG_TWO; 
+        PORTA = get_segment(clock.minutesH);  
+
+    }
+    else if (digit == 4) {
+        PORTB = DIG_ONE;
+        PORTA = get_segment(clock.minutesL);
+    }
+    else if (digit == 5) {
+        PORTB = COLON;
+        PORTA = 0x04;
+    }
+    digit++; 
+    
+    //update digit to display
+}
+
+//Initialize Timer/Counter 0
+void init_clk() {
+    ASSR |= (1<<AS0); //use ext oscillator
+    TCCR0 |= (1<<CS00) | (1<<WGM01); //start clock no prescale with CTC mode
+    TIMSK |= (1<<OCIE0); //enable output compare match interrupt
+    OCR0 = 32;
+
+    TCCR2 |= (1 << WGM20) | (1 << WGM21) | (1 << CS20);
+    TCCR2 |= (1 << COM20) | (1 << COM21);
+    OCR2 = 1;   
+}
+/* initialize to 125 kHz (datasheet), using VCC for reference,
+ * 8 bit resolution, and then do the first conversion (init) 
+ */
+void init_adc() {
+
+    DDRF   &= ~(1 << PF0);
+    ADCSRA |=  (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2);
+    ADMUX  |=  (1 << REFS0) | (1 << ADLAR);  
+    ADCSRA |=  (1 << ADEN); // do the first conversion
+}
+
+void init_spi() {
+    SPCR |= (1<<SPE) | (1<<MSTR); //Enable SPI and set as master
+    SPSR |= (1<<SPI2X); //Enable double SPI speed for master mode
+
+}
+
+uint8_t main() {
+
+    DDRB = 0xF7;
+    PORTB = 0x07; 
+    CLEAR(DDRA);
+    SET(PORTA); 
+    init_spi();
+    init_clk();
+    init_adc();
+    sei();
+    while(1){}
+    cli();
+    return 0;
+}//main
+
+
+
+/*
+ if (digit == 1) {
         PORTB = DIG_ONE;
         PORTA = get_segment(seg_count[0]);  
     }
@@ -387,49 +497,29 @@ ISR(TIMER0_COMP_vect) {
         PORTA = get_segment(seg_count[3]);
     }
     digit++; 
-    //update digit to display
-}
-
-//Initialize Timer/Counter 0
-void init_clk() {
-    ASSR |= (1<<AS0); //use ext oscillator
-    TCCR0 |= (1<<CS00) | (1<<WGM01); //start clock no prescale with CTC mode
-    TIMSK |= (1<<OCIE0); //enable output compare match interrupt
-    OCR0 = 128;
-
-    TCCR2 |= (1 << WGM20) | (1 << WGM21) | (1 << CS20) | (1 << CS21);
-    TCCR2 |= (1 << COM21);
-    OCR2 = 128;   
-}
-/* initialize to 125 kHz (datasheet), using VCC for reference,
- * 8 bit resolution, and then do the first conversion (init) 
- */
-void init_adc() {
-
-    DDRF   &= ~(1 << PF0);
-    ADCSRA |=  (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2);
-    ADMUX  |=  (1 << REFS0);        
-    ADCSRA |=  (1 << ADEN); // do the first conversion
-}
-
-void init_spi() {
-    SPCR |= (1<<SPE) | (1<<MSTR); //Enable SPI and set as master
-
-    SPSR |= (1<<SPI2X); //Enable double SPI speed for master mode
-
-}
-
-uint8_t main() {
-
-    DDRB = 0xF7;
-    PORTB = 0x07; 
-    CLEAR(DDRA);
-    SET(PORTA); 
     
-    init_spi();
-    init_clk();
-    sei();
-    while(1){}
-    cli();
-    return 0;
-}//main
+*
+*
+
+    if (clock.seconds == 250) {
+        clock.seconds = 0;
+        clock.minutesL++;
+        if (clock.minutesL == 10) {
+            clock.minutesL = 0;
+            clock.minutesH++;
+            if (clock.minutesH == 6) {
+                clock.minutesH = 0;
+                clock.minutesL = 0;
+                clock.hoursL++;
+                if (clock.hoursH == 2 && clock.hoursL == 4) {
+                    clock.hoursH = 0;
+                    clock.hoursL = 0;
+                }
+                else if (clock.hoursL == 10) {
+                        clock.hoursL = 0;
+                        clock.hoursH++;
+                } 
+            }
+        }
+    }
+*/
