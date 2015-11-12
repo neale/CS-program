@@ -1,7 +1,7 @@
 PRG            =lab4
 #PRG            =led_display_test
 
-OBJ            = $(PRG).o
+OBJ            = $(PRG).o LCDDriver.o lcd_code.o notes.o
 
 MCU_TARGET     = atmega128
 OPTIMIZE       = -O2    # options are 1, 2, 3, s
@@ -23,6 +23,14 @@ clean:
 	rm -rf *.o $(PRG).elf *.bin *.hex *.srec *.bak  
 	rm -rf $(PRG)_eeprom.bin $(PRG)_eeprom.hex $(PRG)_eeprom.srec
 	rm -rf *.lst *.map 
+
+%.d: %.c
+	@set -e; rm -f $@; \
+	$(CC) -MM $(CFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
+
+-include $(SRCS:.c=.d)
 
 #setup for for USB programmer
 #may need to be changed depending on your programmer

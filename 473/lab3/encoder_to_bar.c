@@ -31,7 +31,7 @@
 void port_init(void)
 {
  DDRB = 0xFF;
- DDRE = (1<<PIN6); //PORTE all outputs
+ DDRE = (1<<PIN1); //PORTE all outputs
 }
 
 /***********************************************************************/
@@ -71,8 +71,8 @@ void tcnt0_init(void){
 ISR(TIMER0_COMP_vect){
   static uint8_t encoder = 0;
 
-  PORTE &= ~(1<<PIN6); //lock
-  PORTE |= (1<<PIN6); //and load
+  PORTE &= ~(1<<PIN1); //lock
+  PORTE |= (1<<PIN1); //and load
   SPDR = 0xFF; //junk byte
   while(!(SPSR & (1<<SPIF))){}; //wait till data is sent out (while spin loop)
   encoder = SPDR;
@@ -90,5 +90,4 @@ int main(){
   sei();
   while(1){}
 }
-
 

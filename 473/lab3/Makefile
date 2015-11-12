@@ -1,5 +1,5 @@
 PRG            =test
-#PRG            =led_display_test
+#PRG            =encoder_to_bar
 
 OBJ            = $(PRG).o
 

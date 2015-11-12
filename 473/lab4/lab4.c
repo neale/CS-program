@@ -9,6 +9,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
+#include <string.h>
 
 #define DIG_ONE   0x01
 #define DIG_TWO   0x11
@@ -16,35 +17,24 @@
 #define DIG_FOUR  0x41
 #define COLON     0x21 
 
-#define LENC_FWD_1 SPDR & 0xFE
-#define LENC_FWD_2 SPDR & 0xFC
-#define LENC_FWD_3 SPDR & 0xFD
+#define LCD_DATA(d) {           \
+    SPDR = 0x01;                \
+    while (!(SPSR & 0xSPIF)) {}   \
+    SPDR = (d);                 \
+    while (!(SPSR & 0xSPIF0)) {}   \
+    PORTF |= 0x08;              \
+    PORTF &= ~0x08;             \
+}
 
-
-#define LENC_REV_1 SPDR & 0xFD
-#define LENC_REV_2 SPDR & 0xFC
-#define LENC_REV_3 SPDR & 0xFE
-
-#define RESTL 0xFF
-
-#define LSTATE1  0xFE
-#define LSTATE2  0xFC
-#define LSTATE3  0xFD
-
-#define RSTATE1  0xFB
-#define RSTATE2  0xF3
-#define RSTATE3  0xF7
-
-
-#define RENC_FWD_1 SPDR & 0xFB
-#define RENC_FWD_2 SPDR & 0xF3
-#define RENC_FWD_3 SPDR & 0xF7
-
-#define RENC_REV_1 SPDR & 0xF7
-#define RENC_REV_2 SPDR & 0xF3
-#define RENC_REV_3 SPDR & 0xFB
-
-
+// RS bit = 0
+#define LCD_CMD(c) {            \
+    SPDR = 0x00;                \
+    while (!(SPSR & SPIF)) {}   \
+    SPDR = (c);                 \
+    while (!(SPSR & SPIF)) {}   \
+    PORTF |= 0x08;              \
+    PORTF &= ~0x08;             \
+}
 
 #define ONE   0b11111001
 #define TWO   0b10100100
@@ -61,38 +51,79 @@
 #define FALSE 0
 #define CLEAR(x) (x = 0x00)
 #define SET(x) (x = 0xFF)
-#define BAR_EN PORTB &=~(1<<PB0);PORTD &=~(1<<PD4);PORTE |=(1 << PE6)
-#define BAR_N PORTB |= (1<<PB0);PORTD |=(1<<PD4)
-#define ENC_EN PORTB |=(1<<PB0);PORTE &=~(1<<PE6)
-#define ENC_N PORTE |= (1 << PE6)
+
+enum enc_dir {REST, DEC, INC};
+typedef enum enc_dir dir;
 
 typedef struct {
 
-    uint8_t hoursH;
-    uint8_t hoursL;
-    uint8_t minutesH;
-    uint8_t minutesL;
-    uint16_t seconds;
-    uint8_t type;
+    int  hoursH;
+    int  hoursL;
+    int  minutesH;
+    int  minutesL;
+    uint16_t  seconds;
+    int  mode;
+    int  hoursH_old;
+    int  hoursL_old;
+    int  minutesH_old;
+    int  minutesL_old;
+    int  set_hours;
+    int  set_minutes;
+    int  alarm_hourH;
+    int  alarm_hourL;
+    int  alarm_minuteH;
+    int  alarm_minuteL;
 
 } Clock;
 
-Clock clock = {0};  
+Clock clock = {0};
 
+volatile uint8_t song;
+volatile uint16_t beat;
+volatile uint16_t max_beat;
+volatile uint8_t  notes;
+
+//Mute is on PORTD
+//set the hex values to set and unset the mute pin
+//I used PORTD-PIN2
+#define mute 0x04
+#define unmute 0xFB
+//Alarm is also on PORTD
+//set the hex value for the alarm pin
+//I used PORTD-PIN7
+#define ALARM_PIN 0x80
+#define NUM_SONGS 4
+//set this variable to select the song
+//(0-3, unless you add more)
+
+
+// arming string for alarm
+char armed[6] = "ARMED\0";
+int digit_mode = 1;
+int alarm_now = FALSE;
+int snooze_mode = FALSE;
+//should only count to 6, counts down the chars to send
+int alarm_armed = FALSE;
+int arm_count = 6;
+uint8_t pos = 0;
+int count = 0;
 /* holds the seperated digits of count */
 unsigned int seg_count[4] = {0};
 /* keeps track of which digit is being updated */
 uint8_t digit = 1;
-/* how many digits make up count */
-uint8_t digits = 0;
 /* buttons that correspond to bar graph modes */
-static int count = 0;
-uint8_t count_two = FALSE;
-uint8_t count_four = FALSE;
-/* current number to count up by: bar graph modes */
-uint8_t multiplier = 1;
-/* holds the value to send to bar graph */
-uint8_t buffer = 0;
+uint8_t three     = FALSE;
+uint8_t four      = FALSE;
+uint8_t five      = FALSE;
+uint8_t five_old  = FALSE;
+uint8_t six       = FALSE;
+uint8_t seven     = FALSE;
+
+int hour_change = 0;
+int min_change  = 0;
+int music = 0;
+int snooze_count = 0;
+int button_pressed = FALSE;
 
 uint8_t debounce_switch(button) {
 
@@ -113,51 +144,130 @@ void scan(void) {
     for (i = 0; i < 8; i++) {
         if (debounce_switch(i)) {    
             switch(i) {
-                case (6):
-                    count_two = !count_two;
+                //snooze
+                case(3):
+                    if(alarm_now) {
+                        LCD_Clr();
+                        LCD_PutStr("Snoozed");
+                        snooze_mode = TRUE;
+                        alarm_now = FALSE;
+                        alarm_armed = FALSE;
+                        clock.mode = 0;
+                        OCR3A = 0x1000;
+                        ICR3  = 0xFFFF;
+                        music_off();
+                        music = FALSE;
+
+                    }
                     break;
+                //display alarm
+                case(4):
+                    clock.mode = 2;
+                    break;
+                //state is for setting alarm
+                case (5):
+
+                    if(five_old == TRUE) {
+                        clock.alarm_hourH   = clock.hoursH;
+                        clock.alarm_hourL   = clock.hoursL;
+                        clock.alarm_minuteH = clock.minutesH;
+                        clock.alarm_minuteL = clock.minutesL;
+
+                        clock.hoursH        = clock.hoursH_old;
+                        clock.hoursL        = clock.hoursL_old;
+                        clock.minutesH      = clock.minutesH_old;
+                        clock.minutesL      = clock.minutesL_old;
+                        alarm_armed = TRUE;
+                        clock.mode = 0;
+                    }
+                    else {
+                        clock.hoursH_old   = clock.hoursH; 
+                        clock.hoursL_old   = clock.hoursL; 
+                        clock.minutesH_old = clock.minutesH; 
+                        clock.minutesL_old = clock.minutesL;      
+                        five_old = TRUE;           
+                        clock.mode = 1;
+                    }
+                    button_pressed = TRUE;
+                    break;
+                
+                //returns to normal
+                case (6):
+                    
+                    if(five_old == TRUE) {
+                        clock.alarm_hourH   = clock.hoursH;
+                        clock.alarm_hourL   = clock.hoursL;
+                        clock.alarm_minuteH = clock.minutesH;
+                        clock.alarm_minuteL = clock.minutesL;
+                        clock.hoursH        = clock.hoursH_old;
+                        clock.hoursL        = clock.hoursL_old;
+                        clock.minutesH      = clock.minutesH_old;
+                        clock.minutesL      = clock.minutesL_old;
+                        alarm_armed = TRUE;
+                        five_old = FALSE;
+                    } else {
+                        clock.alarm_hourH   = 0;
+                        clock.alarm_hourL   = 0;
+                        clock.alarm_minuteH = 0;
+                        clock.alarm_minuteL = 0;
+                        alarm_armed = FALSE;
+                    }
+                    if (!alarm_armed) {
+                        LCD_Clr();
+                    }
+                    if (snooze_mode) {
+                        LCD_Clr();
+                    }
+                    snooze_mode = FALSE;
+                    alarm_now = FALSE;
+                    music = FALSE;
+                    music_off();
+                    clock.mode = 0;
+                    five_old = FALSE;
+                    OCR3A = 0x1000;
+                    ICR3  = 0xFFFF;
+                    snooze_count = 0;
+                    button_pressed = TRUE;
+                    break;
+                //state is for setting clock
                 case (7):
-                    count_four = !count_four;
+                    if(five_old == TRUE) {
+                        clock.alarm_hourH   = clock.hoursH;
+                        clock.alarm_hourL   = clock.hoursL;
+                        clock.alarm_minuteH = clock.minutesH;
+                        clock.alarm_minuteL = clock.minutesL; 
+                        clock.hoursH        = clock.hoursH_old;
+                        clock.hoursL        = clock.hoursL_old;
+                        clock.minutesH      = clock.minutesH_old;
+                        clock.minutesL      = clock.minutesL_old;
+                        alarm_armed = TRUE;
+                        five_old = FALSE;
+                    }
+                    music = FALSE;
+                    music_off();
+                    clock.mode = 1;
+                    five_old = FALSE;
+                    OCR3A = 0x1000;
+                    ICR3  = 0xFFFF;
+                    snooze_count = 0;
+                    button_pressed = TRUE;
                     break;
                 default:
+                    clock.mode = 0;
                     break;
             }
         }
-    }
-    DDRA = 0xFF; 
-    /* Enters the modes for the count */
-    if (!count_two && !count_four) {
-        multiplier = 1;
-        buffer = 0x80;
-    }
-    else if (count_two && count_four) {
-        multiplier = 0;
-        buffer = 0x00;
-   }
-    else if (count_two) {
-        multiplier = 2;
-        buffer = 0xC0;
-   }
-    else if (count_four) {
-        multiplier = 4;
-        buffer = 0xF0;
-
-    }
-    /* send out to bar graph display */
-    SPDR = buffer;
-    while (!(SPSR & (1 << SPIF))) { }
-    /* strobe */
-    PORTB &= ~(1 << PB0);
-    PORTB |=  (1 << PB0);
-
-}
-int scan_encoders(int count) {
     
+    DDRA = 0xFF; 
+    }
+}
+void scan_encoders(void) {
+
     /* encoder state machine 
      * old values are listed along with new ones
-       if the state of the old value increments to new value 
-       then the direction is updated and count is incremented
-       if reverse, count is decremented
+     if the state of the old value increments to new value 
+     then the direction is updated and count is incremented
+     if reverse, count is decremented
      */
     static uint8_t old_encoder1A = 0;
     static uint8_t old_encoder2A = 0;
@@ -165,39 +275,41 @@ int scan_encoders(int count) {
     static uint8_t encoder1B = 1;
     static uint8_t encoder2A = 1;   
     static uint8_t encoder2B = 1;
-    static uint8_t clkwise1 = 0;
-    static uint8_t clkwise2 = 0;
-    clkwise1 = 0;
-    clkwise2 = 0;
-    static int cnt = 0;
-    cnt = 0;
     static uint8_t encoder1_shift = TRUE;
     static uint8_t encoder2_shift = TRUE;
     /* encoders are initialized high, decoders are active low*/
-    encoder1A = 1;
-    encoder1B = 1;
-    encoder2A = 1;
-    encoder2B = 1;
     /* data will hold the current value of SPDR */
     static uint8_t data = 0;
+    static dir d1  = REST;
+    static dir d2  = REST;
     /* strobe to MISO data */
-    /* write junk */
     DDRE |= (1 << PE1);
+    if (clock.mode == 1) { 
+        SPDR = 0x01;
+    } else if (clock.mode == 2) {
+        SPDR = 0x02;
+    } else { 
+        SPDR = 0x00;
+    }
+    PORTB |=  (1 << PB0); 
+    PORTB &= ~(1 << PB0); 
+    d1 = REST;
+    d2 = REST;
+    while(!(SPSR & (1 << SPIF))) { }
     PORTE &= ~(1 << PE1);
     PORTE |= (1 << PE1);
-    SPDR = 0x00;
-    while(!(SPSR & (1 << SPIF))) { }
     data = SPDR;
     /* wait for data */
     /* extract state bits of encoders */
-    encoder1A = (data & (1 << 0))>>0; //first bit 1
-    encoder2A = (data & (1 << 2))>>2; //first bit 2
-    encoder1B = (data & (1 << 1))>>1; //second bit 1
-    encoder2B = (data & (1 << 3))>>3; //second bit 2
+    encoder1A = !((data & (1 << 0))>>0); //first bit 1
+    encoder2A = !((data & (1 << 2))>>2); //first bit 2
+    encoder1B = !((data & (1 << 1))>>1); //second bit 1
+    encoder2B = !((data & (1 << 3))>>3); //second bit 2
     /* if the bit is not set, then its changing */
     /* encoders are active low, so is level is low
      * then its still active and it hasn't counted yet 
      */
+
     if (!encoder1A) {
         encoder1_shift = FALSE;
     }
@@ -209,56 +321,50 @@ int scan_encoders(int count) {
     }
     if (!encoder2B) {
         encoder2_shift = FALSE;
-    }
-    /* if the cycle has been completed register a count
-     * if the second bit was clear its clockwise
-     * otherwise its ccw
-     */
-    if ((encoder1A) && (!old_encoder1A)) {
-        if (!encoder1B) {
-            clkwise1 = TRUE;
-        } 
-        else {
-            clkwise1 = FALSE;
-        }
-    }
-    if ((encoder2A) && (!old_encoder2A)) {
-        if (!encoder2B) {
-            clkwise2 = TRUE;
-        } 
-        else {
-            clkwise2 = FALSE;
-        }
-    }
-    /* set old states to new states */
-    old_encoder1A = encoder1A;
-    old_encoder2A = encoder2A;
-    
+    } 
     /* if its back in the notch position 
      * read the direction and increment as needed
      */
-    if (encoder1A && encoder1B) {
-        if (!encoder1_shift) {
-            if (!clkwise1) {
-                cnt -= multiplier; 
-            } else {
-                cnt += multiplier;
-            }
-            encoder1_shift = TRUE;
+    if ((!old_encoder1A) && (encoder1A)) {
+        if (!encoder1B) {
+            d1 = INC;
+        } else {
+            d1 = DEC;
         }
     }
-    if (encoder2A && encoder2B) {
-        if (!encoder2_shift) {
-            if (!clkwise2) {
-                cnt -= multiplier;
-            } else {
-                cnt += multiplier;
-            }
-            encoder2_shift = TRUE;
+    if ((!old_encoder2A) && (encoder2A)) {
+        if (!encoder2B) {
+            d2 = INC;
+        } else {
+            d2 = DEC;
         }
-    } //else { cnt += 10; } 
-    /* return the count variable */  
-    return cnt;
+    }
+    old_encoder1A = encoder1A;
+    old_encoder2A = encoder2A;
+    if (!button_pressed) {
+        if (encoder1A && encoder1B) {
+            if (!encoder1_shift) {
+                if (d1 == DEC) {
+                    clock.hoursL--;
+                } else {
+                    clock.hoursL++;
+                       //account for overflow
+                }
+                encoder1_shift = TRUE;
+            }
+        }
+        if (encoder2A && encoder2B) {
+            if (!encoder2_shift) {
+                if (d2 == DEC) {
+                    clock.minutesL--;
+               } else {
+                    clock.minutesL++;
+                }
+                encoder2_shift = TRUE;
+            }
+        }
+    }
+    button_pressed = FALSE;    
 }
 uint8_t get_segment(uint8_t bcd) {
 
@@ -347,101 +453,293 @@ ISR(TIMER0_COMP_vect) {
     DDRB = 0xF7;
     //Set SS high
     PORTB = 0xF7;
-    static uint8_t digits = 0;
+    static int colon = 0;
+    static int colon_mode = 0;
+    static int snooze_now = 0;
+    static int lcd_displayed = FALSE;
+    static int display = 0;
     static uint8_t digit = 1;
-    static int diff = 0;
-    clock.seconds++;
-    if (clock.seconds == 60000) {
-        clock.seconds = 0;
-        clock.minutesL++;
-    }
-    if (clock.minutesL == 10) {
-        clock.minutesL = 0;
-        clock.minutesH++;
-    }
-    if (clock.minutesH == 6) {
-        clock.minutesH = 0;
-        clock.minutesL = 0;
-        clock.hoursL++;
-    }
-    if (clock.hoursH == 2 && clock.hoursL == 4) {
-        clock.hoursH = 0;
-        clock.hoursL = 0;
-    }
-    else if (clock.hoursL == 10) {
-        clock.hoursL = 0;
-        clock.hoursH++;
-    } 
-    //states for bar graph
+    static int val1, val2, val3, val4;
+    static int alarm_disp = FALSE;
     DDRA = 0x00;
     PORTA = 0xFF;
     scan();
+    if (alarm_now && !alarm_disp) {
+
+        LCD_Clr();
+        LCD_PutStr("ALARM!!");
+        alarm_disp = TRUE;
+    }
+    clock.seconds++;
+    switch (clock.mode) {
+        case(0):
+
+            if (clock.seconds == 60000) {
+                clock.seconds = 0;
+                clock.minutesL++;
+            }
+            colon_mode = 0;
+            digit_mode = 1;
+            PORTB &= ~(1 << PB0); 
+            PORTB |=  (1 << PB0);
+            SPDR = 0x00;
+            while(!(SPSR & (1 << SPIF))) { }
+
+            if (snooze_mode && !music) {
+                music = FALSE;
+                if (snooze_count < 10){
+                    if (clock.seconds % 1000 == 0) {
+                        snooze_count++;
+                        if (snooze_count == 10) {
+                            snooze_now = TRUE;
+                            music_on();
+                            music = TRUE;
+                        } else { snooze_now = FALSE; }
+                    }
+                }
+            }
+            else if (snooze_now && music) {
+                alarm_now = TRUE;
+                val1 = clock.hoursH;
+                val2 = clock.hoursL;
+                val3 = clock.minutesH;
+                val4 = clock.minutesL;
+                colon_mode = 0;
+                digit_mode = 0;
+                alarm_armed = FALSE;
+                music = TRUE;
+            }
+            else if (((clock.alarm_hourH == clock.hoursH)&&(clock.alarm_hourL == clock.hoursL)&&(clock.alarm_minuteH == clock.minutesH)&&(clock.alarm_minuteL == clock.minutesL))) { 
+                if ((alarm_armed == TRUE) && (!music)) {
+                    alarm_now = TRUE;
+                    val1 = clock.alarm_hourH;
+                    val2 = clock.alarm_hourL;
+                    val3 = clock.alarm_minuteH;
+                    val4 = clock.alarm_minuteL;
+                    colon_mode = 0;
+                    digit_mode = 0;
+                    music_on();
+                    music = TRUE;
+                    OCR3A = 0x1000;
+                    ICR3  = 0xFFFF;
+                    snooze_count = 0;
+
+                } else if (((alarm_armed == TRUE) && music)) {
+                    alarm_now = TRUE;
+                    val1 = clock.alarm_hourH;
+                    val2 = clock.alarm_hourL;
+                    val3 = clock.alarm_minuteH;
+                    val4 = clock.alarm_minuteL;
+                    colon_mode = 0;
+                    digit_mode = 0;
+                }
+            } else {
+                colon_mode = 0;
+                digit_mode = 1;
+                music = FALSE;
+                music_off();
+                OCR3A = 0x1000;
+                ICR3  = 0xFFFF;
+                snooze_now = FALSE;
+            }
+            if (clock.minutesL == 10) {
+                clock.minutesL = 0;
+                clock.minutesH++;
+            }
+            if (clock.minutesH == 6) {
+                clock.minutesH = 0;
+                clock.minutesL = 0;
+                clock.hoursL++;
+            }
+            if (clock.hoursH == 2 && clock.hoursL == 4) {
+                clock.hoursH = 0;
+                clock.hoursL = 0;
+            }
+            else if (clock.hoursL == 10) {
+                clock.hoursL = 0;
+                clock.hoursH++;
+            } 
+            val1 = clock.hoursH;
+            val2 = clock.hoursL;
+            val3 = clock.minutesH;
+            val4 = clock.minutesL;
+            
+            break;
+
+        case(1):   
+         
+            colon_mode = 1;
+            digit_mode = 1;
+            scan_encoders();
+            if (clock.hoursL > 9) {
+                clock.hoursL = 0;
+                clock.hoursH++;
+            } else if (clock.hoursH == 2 && clock.hoursL == 5) {
+                clock.hoursH = 0;
+                clock.hoursL = 0;
+            } else if (clock.hoursH <= 0 && clock.hoursL < 0) {
+                clock.hoursH = 2;
+                clock.hoursL = 3;
+            } else if (clock.hoursL < 0) {
+                clock.hoursH--;
+                clock.hoursL = 9;
+            }
+            if (clock.minutesL > 9) {
+                clock.minutesL = 0;
+                clock.minutesH++;
+            } else if (clock.minutesH == 6 && clock.minutesL == 0) {
+                clock.minutesH = 0;
+                clock.minutesL = 0;
+            } 
+            else if(clock.minutesH == 0 && clock.minutesL < 0) {
+                clock.minutesL = 9; 
+                clock.minutesH = 5;
+            } else if(clock.minutesL < 0) {
+                clock.minutesL = 9;
+                clock.minutesH--;
+            }
+            val1  = clock.hoursH;
+            val2  = clock.hoursL;
+            val3  = clock.minutesH;
+            val4  = clock.minutesL;
+            break;
+
+        case(2):
+            colon_mode = 1;
+            digit_mode = 1;
+            val1 = clock.alarm_hourH;
+            val2 = clock.alarm_hourL;
+            val3 = clock.alarm_minuteH;
+            val4 = clock.alarm_minuteL;
+            break;
+
+        default :
+            break;
+    }
+    switch (colon_mode) {
+        case(0):
+            if (clock.seconds % 500 == 0) {
+                colon = TRUE;
+            }
+            if (clock.seconds % 1000 == 0) {
+               colon = FALSE;
+            }
+            break;
+        case(1):
+            colon = TRUE; 
+            break;
+        case(2):
+            colon = FALSE;
+            break;
+        default:
+            break;
+    }
+    switch (digit_mode) {
+        case(0):
+            if (clock.seconds % 500 == 0) {
+                display = TRUE;
+            }
+            if (clock.seconds % 1000 == 0) {
+                display = FALSE;
+            }
+            break;
+        case(1):
+            display = TRUE; 
+            break;
+        case(2):
+            display = FALSE;
+            break;
+        default:
+            break;
+    }
     ADCSRA |= (1 << ADSC);
-    while (!ADCSRA & (1 << ADIF)) {}
+    while (!ADCSRA & (1 << ADIF)) { }
     ADCSRA |=  (1 << ADIF);
-    //digits = segsum(count, seg_count);
-    //diff = 0;
-    //diff = scan_encoders(count);
-    //count += diff;
     DDRA = 0xFF;
     count = ADCH; 
-    if (count > 200) {
+    if (count > 225) {
         OCR2 = 250;
+    } else if (count > 200) {
+        OCR2 = 215;
+    } else if (count > 175) {
+        OCR2 = 180;
     } else if (count > 150) {
-        OCR2 = 192;
+        OCR2 = 160;
+    } else if (count > 125) {
+        OCR2 = 135;
     } else if (count > 100) {
-        OCR2 = 128;
+        OCR2 = 115;
+    } else if (count > 75) {
+        OCR2 = 80;
     } else if (count > 50) {
-        OCR2 = 64;
+        OCR2 = 55;
     } else {
         OCR2 = 10;
     }
-    /*if (count > 1023) {
-        count -= 1023;
-    }
-    else if (count < 0) {
-        count += 1023;
-    }*/
     if (digit > 5) {
         digit = 1;
     }
-    if (digit == 1) {
+    if (digit == 1 && display && val1 > 0) {
         PORTB = DIG_FOUR;
-        PORTA = get_segment(clock.hoursH);  
+        PORTA = get_segment(val1);  
     }
-    else if (digit == 2) {
+    else if (digit == 2 && display) {
         PORTB = DIG_THREE; 
-        PORTA = get_segment(clock.hoursL);  
+        PORTA = get_segment(val2);  
 
     }
-    else if (digit == 3) {
+    else if (digit == 3 && display) {
         PORTB = DIG_TWO; 
-        PORTA = get_segment(clock.minutesH);  
+        PORTA = get_segment(val3);  
 
     }
-    else if (digit == 4) {
+    else if (digit == 4 && display) {
         PORTB = DIG_ONE;
-        PORTA = get_segment(clock.minutesL);
+        PORTA = get_segment(val4);
     }
-    else if (digit == 5) {
+    else if (digit == 5 && colon) {    
         PORTB = COLON;
         PORTA = 0x04;
     }
     digit++; 
-    
+    if (alarm_armed && (lcd_displayed == FALSE)) {
+        LCD_Clr();
+        LCD_PutStr("ARMED!!");
+        lcd_displayed = TRUE;
+    }
+    if(clock.seconds % 48 == 0) {
+    //for note duration (64th notes) 
+        beat++;
+    }
+
     //update digit to display
 }
 
+ISR(TIMER1_COMPA_vect) {
+  PORTD ^= ALARM_PIN;      //flips the bit, creating a tone
+  if(beat >= max_beat) {   //if we've played the note long enough
+    notes++;               //move on to the next note
+    play_song(song, notes);//and play it
+  }
+}
+
+
 //Initialize Timer/Counter 0
 void init_clk() {
-    ASSR |= (1<<AS0); //use ext oscillator
-    TCCR0 |= (1<<CS00) | (1<<WGM01); //start clock no prescale with CTC mode
-    TIMSK |= (1<<OCIE0); //enable output compare match interrupt
-    OCR0 = 32;
 
-    TCCR2 |= (1 << WGM20) | (1 << WGM21) | (1 << CS20);
-    TCCR2 |= (1 << COM20) | (1 << COM21);
-    OCR2 = 1;   
+    ASSR   |= (1<<AS0); //use ext oscillator
+    TCCR0  |= (1<<CS00) | (1<<WGM01); //start clock no prescale with CTC mode
+    TIMSK  |= (1<<OCIE0); //enable output compare match interrupt
+    OCR0    = 32;
+
+    TCCR2  |= (1 << WGM20) | (1 << WGM21) | (1 << CS20);
+    TCCR2  |= (1 << COM20) | (1 << COM21);
+    OCR2    = 1;   
+
+    TCCR3A |= (1 << COM3A1) | (1 << WGM31) | (1 << CS30); 
+    TCCR3B |= (1 << WGM33) | (1 << CS30) | (1 << WGM32);
+    OCR3A   = 0x3000;
+    ICR3    = 0x4000;
 }
 /* initialize to 125 kHz (datasheet), using VCC for reference,
  * 8 bit resolution, and then do the first conversion (init) 
@@ -462,64 +760,24 @@ void init_spi() {
 
 uint8_t main() {
 
-    DDRB = 0xF7;
-    PORTB = 0x07; 
+    DDRB   = 0xF7;
+    DDRE  |= (1 << PE3);
+    PORTB  = 0x07; 
+    DDRD  |= 0x80;
+    DDRF  |= 0x08 | 0x80;
+    PORTD  = (1 << PD5) | (1 << PD7);
     CLEAR(DDRA);
     SET(PORTA); 
     init_spi();
     init_clk();
     init_adc();
+    music_init();
+    //music_on();
+    LCD_Init();
     sei();
     while(1){}
     cli();
     return 0;
+
 }//main
 
-
-
-/*
- if (digit == 1) {
-        PORTB = DIG_ONE;
-        PORTA = get_segment(seg_count[0]);  
-    }
-    else if (digit == 2 && count >= 10) {
-        PORTB = DIG_TWO; 
-        PORTA = get_segment(seg_count[1]);  
-
-    }
-    else if (digit == 3 && count >= 100) {
-        PORTB = DIG_THREE; 
-        PORTA = get_segment(seg_count[2]);  
-
-    }
-    else if (digit == 4 && count >= 1000) {
-        PORTB = DIG_FOUR;
-        PORTA = get_segment(seg_count[3]);
-    }
-    digit++; 
-    
-*
-*
-
-    if (clock.seconds == 250) {
-        clock.seconds = 0;
-        clock.minutesL++;
-        if (clock.minutesL == 10) {
-            clock.minutesL = 0;
-            clock.minutesH++;
-            if (clock.minutesH == 6) {
-                clock.minutesH = 0;
-                clock.minutesL = 0;
-                clock.hoursL++;
-                if (clock.hoursH == 2 && clock.hoursL == 4) {
-                    clock.hoursH = 0;
-                    clock.hoursL = 0;
-                }
-                else if (clock.hoursL == 10) {
-                        clock.hoursL = 0;
-                        clock.hoursH++;
-                } 
-            }
-        }
-    }
-*/
