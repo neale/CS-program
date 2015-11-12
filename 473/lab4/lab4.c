@@ -1,8 +1,6 @@
-// lab2_skel.c 
+// lab4_skel.c 
 // Neale Ratzlaff
-// 9.12.08
-// 7986
-// am798
+// 11.12.08
 
 #define F_CPU 16000000 // cpu speed in hertz 
 
@@ -17,6 +15,10 @@
 #define DIG_FOUR  0x41
 #define COLON     0x21 
 
+/* These are the routines for sending data to the LCD
+ * the first byte is to put the LCD into command mode, 
+ * and the second byte is to store data into SRAM
+ */
 #define LCD_DATA(d) {           \
     SPDR = 0x01;                \
     while (!(SPSR & 0xSPIF)) {}   \
@@ -52,9 +54,19 @@
 #define CLEAR(x) (x = 0x00)
 #define SET(x) (x = 0xFF)
 
-enum enc_dir {REST, DEC, INC};
+/* state machine for the encoders, 
+ * they're either at rest, or moving 
+ */
+enum enc_dir {REST, REV, FW};
 typedef enum enc_dir dir;
 
+/* struct to hold all clock data
+ * Keeps track of :
+       clock time,
+       total seconds passed, 
+       stores time while setting alarm,
+       alarm time
+ */
 typedef struct {
 
     int  hoursH;
@@ -78,6 +90,12 @@ typedef struct {
 
 Clock clock = {0};
 
+/* song variables (to be played by alarm */
+/* thank you Roger, 
+ * http://web.engr.oregonstate.edu/~traylor/ece473/example_code/kellen_music.c
+ * It took my own work to integrate the timing into my system
+ */
+
 volatile uint8_t song;
 volatile uint16_t beat;
 volatile uint16_t max_beat;
@@ -97,20 +115,19 @@ volatile uint8_t  notes;
 //(0-3, unless you add more)
 
 
-// arming string for alarm
-char armed[6] = "ARMED\0";
-int digit_mode = 1;
-int alarm_now = FALSE;
-int snooze_mode = FALSE;
-//should only count to 6, counts down the chars to send
-int alarm_armed = FALSE;
-int arm_count = 6;
-uint8_t pos = 0;
-int count = 0;
-/* holds the seperated digits of count */
-unsigned int seg_count[4] = {0};
-/* keeps track of which digit is being updated */
-uint8_t digit = 1;
+char armed[6] = "ALARM ARMED\0";   // arming string for alarm
+int dot = FALSE;                   // alarm indicator on 7seg
+int digit_mode = 1;                // mode tells if digits will blink or not
+int alarm_now = FALSE;             // state of alarm currently going off
+int snooze_mode = FALSE;           // snooze state variable
+int alarm_armed = FALSE;           // alarm arming state
+int count = 0;                     // holds ADC value
+unsigned int seg_count[4] = {0};   // seperates number into digits
+uint8_t digit = 1;                 // keeps track of current number displayed to 7seg
+int music = 0;                     // if music is currently being changed              
+int snooze_count = 0;              // keeps track of seconds in snooze mode, counts to 10
+int button_pressed = FALSE;        // True for first loop in new state
+
 /* buttons that correspond to bar graph modes */
 uint8_t three     = FALSE;
 uint8_t four      = FALSE;
@@ -119,11 +136,6 @@ uint8_t five_old  = FALSE;
 uint8_t six       = FALSE;
 uint8_t seven     = FALSE;
 
-int hour_change = 0;
-int min_change  = 0;
-int music = 0;
-int snooze_count = 0;
-int button_pressed = FALSE;
 
 uint8_t debounce_switch(button) {
 
@@ -146,6 +158,7 @@ void scan(void) {
             switch(i) {
                 //snooze
                 case(3):
+                    /* display snooze on LCD, adjust volume to off, and set snooze mode */
                     if(alarm_now) {
                         LCD_Clr();
                         LCD_PutStr("Snoozed");
@@ -166,7 +179,10 @@ void scan(void) {
                     break;
                 //state is for setting alarm
                 case (5):
-
+                    /* if we just came from alarm mode,
+                     * set the alarm time to the displayed time
+                     * grab the old clock time and send to display
+                     */
                     if(five_old == TRUE) {
                         clock.alarm_hourH   = clock.hoursH;
                         clock.alarm_hourL   = clock.hoursL;
@@ -178,22 +194,25 @@ void scan(void) {
                         clock.minutesH      = clock.minutesH_old;
                         clock.minutesL      = clock.minutesL_old;
                         alarm_armed = TRUE;
+                        dot = TRUE;              
                         clock.mode = 0;
                     }
                     else {
+                    /* otherwise enter alarm mode and store clock time */
                         clock.hoursH_old   = clock.hoursH; 
                         clock.hoursL_old   = clock.hoursL; 
                         clock.minutesH_old = clock.minutesH; 
                         clock.minutesL_old = clock.minutesL;      
-                        five_old = TRUE;           
+                        five_old = TRUE;          
+                        dot = FALSE; 
                         clock.mode = 1;
                     }
                     button_pressed = TRUE;
                     break;
                 
-                //returns to normal
+                /* Mode to return to normal */
                 case (6):
-                    
+                    /* first set alarm if we came from alarm mode */
                     if(five_old == TRUE) {
                         clock.alarm_hourH   = clock.hoursH;
                         clock.alarm_hourL   = clock.hoursL;
@@ -205,6 +224,8 @@ void scan(void) {
                         clock.minutesL      = clock.minutesL_old;
                         alarm_armed = TRUE;
                         five_old = FALSE;
+                        dot = TRUE;
+                    /* otherwise reset alarm to 0 */
                     } else {
                         clock.alarm_hourH   = 0;
                         clock.alarm_hourL   = 0;
@@ -212,12 +233,15 @@ void scan(void) {
                         clock.alarm_minuteL = 0;
                         alarm_armed = FALSE;
                     }
+                    /* clear LCD if the alarm is not armed or if in snooze */
                     if (!alarm_armed) {
                         LCD_Clr();
                     }
                     if (snooze_mode) {
                         LCD_Clr();
                     }
+                    /* basically reset everything back to a nominal way */
+                    /* there needs to be a method for the user to get back to 0 */
                     snooze_mode = FALSE;
                     alarm_now = FALSE;
                     music = FALSE;
@@ -231,6 +255,7 @@ void scan(void) {
                     break;
                 //state is for setting clock
                 case (7):
+                    /* store the alarm */
                     if(five_old == TRUE) {
                         clock.alarm_hourH   = clock.hoursH;
                         clock.alarm_hourL   = clock.hoursL;
@@ -242,7 +267,9 @@ void scan(void) {
                         clock.minutesL      = clock.minutesL_old;
                         alarm_armed = TRUE;
                         five_old = FALSE;
+                        dot = TRUE;
                     }
+                    /* go to clock set mode */
                     music = FALSE;
                     music_off();
                     clock.mode = 1;
@@ -269,19 +296,19 @@ void scan_encoders(void) {
      then the direction is updated and count is incremented
      if reverse, count is decremented
      */
-    static uint8_t old_encoder1A = 0;
-    static uint8_t old_encoder2A = 0;
-    static uint8_t encoder1A = 1;
-    static uint8_t encoder1B = 1;
-    static uint8_t encoder2A = 1;   
-    static uint8_t encoder2B = 1;
+    static uint8_t old_encoder1_1 = 0;
+    static uint8_t old_encoder2_1 = 0;
+    static uint8_t encoder1_1 = 1;
+    static uint8_t encoder1_2 = 1;
+    static uint8_t encoder2_1 = 1;   
+    static uint8_t encoder2_2 = 1;
     static uint8_t encoder1_shift = TRUE;
     static uint8_t encoder2_shift = TRUE;
     /* encoders are initialized high, decoders are active low*/
     /* data will hold the current value of SPDR */
     static uint8_t data = 0;
-    static dir d1  = REST;
-    static dir d2  = REST;
+    static dir enc1  = REST;
+    static dir enc2  = REST;
     /* strobe to MISO data */
     DDRE |= (1 << PE1);
     if (clock.mode == 1) { 
@@ -293,58 +320,58 @@ void scan_encoders(void) {
     }
     PORTB |=  (1 << PB0); 
     PORTB &= ~(1 << PB0); 
-    d1 = REST;
-    d2 = REST;
+    enc1 = REST;
+    enc2 = REST;
     while(!(SPSR & (1 << SPIF))) { }
     PORTE &= ~(1 << PE1);
     PORTE |= (1 << PE1);
     data = SPDR;
     /* wait for data */
     /* extract state bits of encoders */
-    encoder1A = !((data & (1 << 0))>>0); //first bit 1
-    encoder2A = !((data & (1 << 2))>>2); //first bit 2
-    encoder1B = !((data & (1 << 1))>>1); //second bit 1
-    encoder2B = !((data & (1 << 3))>>3); //second bit 2
+    encoder1_1 = !((data & (1 << 0))>>0); //first bit 1
+    encoder2_1 = !((data & (1 << 2))>>2); //first bit 2
+    encoder1_2 = !((data & (1 << 1))>>1); //second bit 1
+    encoder2_2 = !((data & (1 << 3))>>3); //second bit 2
     /* if the bit is not set, then its changing */
     /* encoders are active low, so is level is low
      * then its still active and it hasn't counted yet 
      */
 
-    if (!encoder1A) {
+    if (!encoder1_1) {
         encoder1_shift = FALSE;
     }
-    if (!encoder1B) { 
+    if (!encoder1_2) { 
         encoder1_shift = FALSE;
     }
-    if (!encoder2A) {
+    if (!encoder2_1) {
         encoder2_shift = FALSE;
     }
-    if (!encoder2B) {
+    if (!encoder2_2) {
         encoder2_shift = FALSE;
     } 
     /* if its back in the notch position 
      * read the direction and increment as needed
      */
-    if ((!old_encoder1A) && (encoder1A)) {
-        if (!encoder1B) {
-            d1 = INC;
+    if ((!old_encoder1_1) && (encoder1_1)) {
+        if (!encoder1_2) {
+            enc1 = FW;
         } else {
-            d1 = DEC;
+            enc1 = REV;
         }
     }
-    if ((!old_encoder2A) && (encoder2A)) {
-        if (!encoder2B) {
-            d2 = INC;
+    if ((!old_encoder2_1) && (encoder2_1)) {
+        if (!encoder2_2) {
+            enc2 = FW;
         } else {
-            d2 = DEC;
+            enc2 = REV;
         }
     }
-    old_encoder1A = encoder1A;
-    old_encoder2A = encoder2A;
+    old_encoder1_1 = encoder1_1;
+    old_encoder2_1 = encoder2_1;
     if (!button_pressed) {
-        if (encoder1A && encoder1B) {
+        if (encoder1_1 && encoder1_2) {
             if (!encoder1_shift) {
-                if (d1 == DEC) {
+                if (enc1 == REV) {
                     clock.hoursL--;
                 } else {
                     clock.hoursL++;
@@ -353,15 +380,15 @@ void scan_encoders(void) {
                 encoder1_shift = TRUE;
             }
         }
-        if (encoder2A && encoder2B) {
-            if (!encoder2_shift) {
-                if (d2 == DEC) {
-                    clock.minutesL--;
-               } else {
-                    clock.minutesL++;
-                }
-                encoder2_shift = TRUE;
+    }
+    if (encoder2_1 && encoder2_2) {
+        if (!encoder2_shift) {
+            if (enc2 == REV) {
+                clock.minutesL--;
+            } else {
+                clock.minutesL++;
             }
+            encoder2_shift = TRUE;
         }
     }
     button_pressed = FALSE;    
@@ -453,24 +480,32 @@ ISR(TIMER0_COMP_vect) {
     DDRB = 0xF7;
     //Set SS high
     PORTB = 0xF7;
-    static int colon = 0;
-    static int colon_mode = 0;
-    static int snooze_now = 0;
-    static int lcd_displayed = FALSE;
-    static int display = 0;
-    static uint8_t digit = 1;
-    static int val1, val2, val3, val4;
-    static int alarm_disp = FALSE;
-    DDRA = 0x00;
+    static int colon = 0;               // holds if the colon is on or off
+    static int colon_mode = 0;          // sets the colon mode: (0: blinking, 1: solid)
+    static int snooze_now = 0;          // if the snooze is currenly alarming
+    static int lcd_displayed = FALSE;   // if the LCD is currently displaying
+    static int display = 0;             // if the leading 0 should be displayed
+    static uint8_t digit = 1;           // holds what digit is being displayed
+    static int val1, val2, val3, val4;  // values to be sent to the display
+    static int alarm_disp = FALSE;      // if the LCD is displaying alarm data
+    DDRA = 0x00;                
     PORTA = 0xFF;
     scan();
+    
+    /* prints alarm data to the LCD once */
     if (alarm_now && !alarm_disp) {
 
         LCD_Clr();
         LCD_PutStr("ALARM!!");
         alarm_disp = TRUE;
     }
-    clock.seconds++;
+    clock.seconds++;  //ms really
+    /* clock mode
+     * timer counts up by milliseconds for each interrupt
+     * checks for equality for the alarm and triggers if equal
+     * in snooze mode, times for 10 seconds and triggers alarm at 10s
+     * handles the enge cases of incrementing time through 24:00 and xx:60
+     */
     switch (clock.mode) {
         case(0):
 
@@ -559,13 +594,22 @@ ISR(TIMER0_COMP_vect) {
                 clock.hoursL = 0;
                 clock.hoursH++;
             } 
+            /* send to display */
             val1 = clock.hoursH;
             val2 = clock.hoursL;
             val3 = clock.minutesH;
             val4 = clock.minutesL;
             
             break;
-
+        /* set clock mode
+         * used for both setting alarm and clock
+         * gets data from the encoders and increments the min/hours accordingly
+         * then it proceeds to handle the overflow/underflow cases:
+               25:00 becomes 00:00,
+               x9:00,
+               00:00 becomes 23:59,
+               and so on
+         */
         case(1):   
          
             colon_mode = 1;
@@ -603,7 +647,9 @@ ISR(TIMER0_COMP_vect) {
             val3  = clock.minutesH;
             val4  = clock.minutesL;
             break;
-
+        /* simply displays alarm time on the LCD
+         * displays 0:00 if nothing is set
+         */
         case(2):
             colon_mode = 1;
             digit_mode = 1;
@@ -616,6 +662,10 @@ ISR(TIMER0_COMP_vect) {
         default :
             break;
     }
+    /* mode controller for the colon, 
+     * blinks in one-second intervals if in clock mode or alarm is triggered
+     * is static if in setting mode
+     */
     switch (colon_mode) {
         case(0):
             if (clock.seconds % 500 == 0) {
@@ -634,6 +684,10 @@ ISR(TIMER0_COMP_vect) {
         default:
             break;
     }
+    /* mode controller for digits
+     * blinks in one second intervals when alarm is going off
+     * always static otherwise
+     */
     switch (digit_mode) {
         case(0):
             if (clock.seconds % 500 == 0) {
@@ -652,11 +706,18 @@ ISR(TIMER0_COMP_vect) {
         default:
             break;
     }
+    /* get data from the ADC:
+           start conversion
+           wait until interrupt flag goes (more reliable than ADSC)
+           get data from ADCH
+    */
     ADCSRA |= (1 << ADSC);
     while (!ADCSRA & (1 << ADIF)) { }
     ADCSRA |=  (1 << ADIF);
     DDRA = 0xFF;
     count = ADCH; 
+
+    /* brightness levels for dimming display (pwm) */
     if (count > 225) {
         OCR2 = 250;
     } else if (count > 200) {
@@ -676,6 +737,7 @@ ISR(TIMER0_COMP_vect) {
     } else {
         OCR2 = 10;
     }
+    /* only displays one number to the 7seg at a time (speedy) */
     if (digit > 5) {
         digit = 1;
     }
@@ -699,14 +761,23 @@ ISR(TIMER0_COMP_vect) {
     }
     else if (digit == 5 && colon) {    
         PORTB = COLON;
-        PORTA = 0x04;
+        if (dot) {
+            PORTA = 0x084; // includes the dot if the alarm is armed
+        } else {
+            PORTA = 0x04;
+        }
     }
     digit++; 
+
+    /* sets the LCD mesage if the alarm is armed */
     if (alarm_armed && (lcd_displayed == FALSE)) {
         LCD_Clr();
         LCD_PutStr("ARMED!!");
         lcd_displayed = TRUE;
     }
+    /* beat counter for the alarm song 
+     * increments the note by one each pass
+     */
     if(clock.seconds % 48 == 0) {
     //for note duration (64th notes) 
         beat++;
@@ -714,7 +785,9 @@ ISR(TIMER0_COMP_vect) {
 
     //update digit to display
 }
-
+/* timer1 routine to generate the song tones
+ * goes off every 64th of a second to play a note
+ */
 ISR(TIMER1_COMPA_vect) {
   PORTD ^= ALARM_PIN;      //flips the bit, creating a tone
   if(beat >= max_beat) {   //if we've played the note long enough
@@ -736,9 +809,11 @@ void init_clk() {
     TCCR2  |= (1 << COM20) | (1 << COM21);
     OCR2    = 1;   
 
+    // Used a fast PWM where duty cycle and frequency can be changed. 
+    // For volume control
     TCCR3A |= (1 << COM3A1) | (1 << WGM31) | (1 << CS30); 
     TCCR3B |= (1 << WGM33) | (1 << CS30) | (1 << WGM32);
-    OCR3A   = 0x3000;
+    OCR3A   = 0x3000; //volume range
     ICR3    = 0x4000;
 }
 /* initialize to 125 kHz (datasheet), using VCC for reference,
