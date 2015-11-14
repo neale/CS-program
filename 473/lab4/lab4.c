@@ -380,15 +380,15 @@ void scan_encoders(void) {
                 encoder1_shift = TRUE;
             }
         }
-    }
-    if (encoder2_1 && encoder2_2) {
-        if (!encoder2_shift) {
-            if (enc2 == REV) {
-                clock.minutesL--;
-            } else {
-                clock.minutesL++;
-            }
+        if (encoder2_1 && encoder2_2) {
+            if (!encoder2_shift) {
+                if (enc2 == REV) {
+                    clock.minutesL--;
+                } else {
+                    clock.minutesL++;
+                }
             encoder2_shift = TRUE;
+            }
         }
     }
     button_pressed = FALSE;    
@@ -758,14 +758,13 @@ ISR(TIMER0_COMP_vect) {
     else if (digit == 4 && display) {
         PORTB = DIG_ONE;
         PORTA = get_segment(val4);
+        if (dot) {
+            PORTA &= ~(1 << 7);
+        }
     }
     else if (digit == 5 && colon) {    
         PORTB = COLON;
-        if (dot) {
-            PORTA = 0x084; // includes the dot if the alarm is armed
-        } else {
-            PORTA = 0x04;
-        }
+        PORTA = 0x04;
     }
     digit++; 
 

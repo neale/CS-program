@@ -20,8 +20,8 @@ char    lcd_string_array[16];  //holds a string to refresh the LCD
 uint8_t i;                     //general purpose index
 
 //delclare the 2 byte TWI read and write buffers (lm73_functions_skel.h)
-extern uint8_t lm73_wr_buf[2];
-extern uint8_t lm73_rd_buf[2];
+uint8_t lm73_wr_buf[2];
+uint8_t lm73_rd_buf[2];
 
 //********************************************************************
 //                            spi_init                               
@@ -39,18 +39,17 @@ void spi_init(void){
 /***********************************************************************/
 /*                                main                                 */
 /***********************************************************************/
-int main ()
-{     
+int main (){
+
 uint16_t lm73_temp;  //a place to assemble the temperature from the lm73
 
-   //initalize SPI 
+spi_init();   //initalize SPI 
 lcd_init();   //initalize LCD (lcd_functions.h)
 init_twi();   //initalize TWI (twi_master.h)  
-
 //set LM73 mode for reading temperature by loading pointer register
 //this is done outside of the normal interrupt mode of operation 
-lm73_wr_buf[0] =    //load lm73_wr_buf[0] with temperature pointer address
-................   //start the TWI write process (twi_start_wr())
+lm73_wr_buf[0] = 0x0000;   //load lm73_wr_buf[0] with temperature pointer address
+twi_start_wr(0x90, lm73_wr_buf, 2);    // write process (twi_start_wr())
 _delay_ms(2);      //wait for the xfer to finish
 
 clear_display();   //clean up the display
@@ -59,13 +58,14 @@ sei();             //enable interrupts before entering loop
 while(1){          //main while loop
   _delay_ms(100);  //tenth second wait
   clear_display(); //wipe the display
-  ................ //read temperature data from LM73 (2 bytes)  (twi_start_rd())
+  twi_start_rd(0x90, lm73_rd_buf, 2); //read temperature data from LM73 (2 bytes)  (twi_start_rd())
   _delay_ms(2);    //wait for it to finish
-//now assemble the two bytes read back into one 16-bit value
-  ................ //save high temperature byte into lm73_temp
-  ................ //shift it into upper byte 
-  ................ //"OR" in the low temp byte to lm73_temp 
-  ................ //convert to string in array with itoa() from avr-libc                           
-  ................ //send the string to LCD (lcd_functions)
+  //now assemble the two bytes read back into one 16-bit value
+  lm73_temp = lm73_rd_buf[1]; //save high temperature byte into lm73_temp
+  lm73_temp <<= 8;            //shift it into upper byte 
+  lm73_temp |= lm73_rd_buf[0];//"OR" in the low temp byte to lm73_temp 
+  itoa(lm73_temp, lcd_string_array, 16); //convert to string in array with itoa() from avr-libc                           
+  string2lcd("hello");
+  string2lcd(lcd_string_array); //send the string to LCD (lcd_functions)
   } //while
 } //main
