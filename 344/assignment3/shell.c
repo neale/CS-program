@@ -130,7 +130,7 @@ int pool(char **args) {
 void shell(void) {
     int status = 1;
     while(status) {
-        puts(": ");
+        printf(": ");
         char *line;
         char **args;
         line = read_line();
