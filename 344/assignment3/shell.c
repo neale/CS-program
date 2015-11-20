@@ -10,24 +10,24 @@
 #define FALSE 0
 
 
-int _builtin_cd(char **args);
-int _builtin_ls(char **args);
-int _builtin_exit(char **args);
-int _builtin_status(char **args);
+int __cd(char **args);
+int __ls(char **args);
+int __exit(char **args);
+int __status(char **args);
 
 int last_exit = 0;
 
 char *_builtin_names[] = {
-    "ls",
-    "cd",
-    "exit",
-    "status"
+    "__ls",
+    "__cd",
+    "__exit",
+    "__status"
 };
 int (*_builtins[])(char**) = {
-    &_builtin_ls,
-    &_builtin_cd,
-    &_builtin_exit,
-    &_builtin_status
+    &__ls,
+    &__cd,
+    &__exit,
+    &__status
 };
 void init(void) {
     system("cls");
@@ -78,7 +78,7 @@ int spawn(char **args) {
     last_exit = 1;
     return last_exit;
 }
-int _builtin_cd(char **args) {
+int __cd(char **args) {
     if (args[1] == NULL) {
         fprintf(stderr, "EnTerm: expected argument to \"cd\"\n");
     } else {
@@ -89,7 +89,7 @@ int _builtin_cd(char **args) {
     last_exit = 1;
     return last_exit;
 }
-int _builtin_ls(char **args) {
+int __ls(char **args) {
     DIR *d;
     struct dirent *dir;
     char *lsdir = args[1];
@@ -108,7 +108,7 @@ int _builtin_ls(char **args) {
     last_exit = 1;
     return last_exit;
 }
-int _builtin_exit(char **args){
+int __exit(char **args){
     return 0;
 }
 /*int _builtin_status(char **args) {
