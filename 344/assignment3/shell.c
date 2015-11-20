@@ -141,9 +141,11 @@ void shell(void) {
         char *line;
         char **args;
         line = read_line();
-        args = parse(line);
-        if (args) {
-            status = pool(args);
+        if (line) {
+            args = parse(line);
+            if (args) {
+                status = pool(args);
+            }
         }
         free(line);
         free(args);
