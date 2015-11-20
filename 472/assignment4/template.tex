@@ -1,0 +1,157 @@
+\documentclass[letterpaper,10pt,titlepage]{article}
+
+\usepackage{graphicx}                                        
+\usepackage{amssymb}                                         
+\usepackage{amsmath}                                         
+\usepackage{amsthm}                                          
+
+\usepackage{alltt}                                           
+\usepackage{float}
+\usepackage{color}
+\usepackage{url}
+
+\usepackage{balance}
+%\usepackage[TABBOTCAP, tight]{subfloat}
+\usepackage{enumitem}
+\usepackage{pstricks, pst-node}
+
+\usepackage{geometry}
+\geometry{textheight=8.5in, textwidth=6in}
+
+%random comment
+
+%\include{pygments.tex}
+
+\newcommand{\cred}[1]{{\color{red}#1}}
+\newcommand{\cblue}[1]{{\color{blue}#1}}
+
+\usepackage{hyperref}
+\usepackage{geometry}
+
+
+
+\def\name{Neale Ratzlaff}
+\title{Computer Architecture Assignment 1}
+\author{Neale Ratzlaff}
+\date{30 September 2015}
+
+%pull in the necessary preamble matter for pygments output
+%\input{pygments.tex}
+
+
+%% The following metadata will show up in the PDF properties
+\hypersetup{
+  colorlinks = true,
+  urlcolor = black,
+  pdfauthor = {\name},
+  pdfkeywords = {CS472},
+  pdftitle = {CS 472 Assignment 1},
+  pdfsubject = {CS 472 Project 1},
+  pdfpagemode = UseNone
+}
+
+\begin{document}
+\maketitle
+\pagebreak
+
+\section{Paging Calculations}
+
+    \begin{itemize}
+    
+        \item[a:]
+            \begin{equation}
+                \begin{aligned}
+                    & Page size         : 2\wedge12B \\
+                    & Address space     : 2\wedge32B \\
+                    & Page entry        : 10B  \\ 
+                    & Pages in table    : \dfrac{2\wedge32}{2\wedge12} \\
+                    &                   : 2\wedge20 pages \\
+                    & Page Table Memory : 10\times2\wedge20 \\
+                    &                   : 10MB \\
+                \end{aligned}
+            \end{equation}
+        
+        \item[b:]  
+            \begin{equation}
+                \begin{aligned}
+                    & Page size         : 2\wedge12B \\
+                    & Address space     : 2\wedge64B \\
+                    & Page entry        : 10B  \\
+                    & Pages in table    : \dfrac{2\wedge64}{2\wedge12} \\
+                    &                   : 2\wedge52 pages \\
+                    & Page Table Memory : 10\times2\wedge52 \\
+                    &                   : 40PB \\
+                \end{aligned}
+            \end{equation}
+        
+        \item[c:] 
+            \begin{equation}
+                \begin{aligned}
+                    & 8K Page size      : 2\wedge13B \\
+                    & Address space     : 2\wedge32B \\
+                    & Page entry        : 10B  \\
+                    & Pages in table    : \dfrac{2\wedge32}{2\wedge13} \\
+                    &                   : 2\wedge19 pages \\
+                    & Page Table Memory : 10\times2\wedge19 \\
+                    &                   : 5MB \\
+                \end{aligned}
+            \end{equation}
+        
+        \item[d:] 
+            \begin{equation}
+                \begin{aligned}
+                    & 8K page size      : 2\wedge13B \\
+                    & Address space     : 2\wedge64B \\
+                    & Page entry        : 10B  \\
+                    & Pages in table    : \dfrac{2\wedge64}{2\wedge13} \\
+                    &                   : 2\wedge51 pages \\
+                    & Page Table Memory : 10\times2\wedge51 \\
+                    &                   : 20PB \\
+                \end{aligned}
+            \end{equation}
+    \end{itemize}
+\pagebreak
+
+\section{Pipelining}
+    
+    Pipelining is the process of executing instructions in a process out of order. 
+    Its done to increase efficiency by allowing instructions to be parallelized. 
+    The basic RISC pipeline consists of five stages: instruction fetch, instruction decode
+    execution, memory access, and register write-back. Every instruction to be executed can 
+    be broken down into these five general steps. Because instructions share the same stages, 
+    the stages can be parallelized by doing all 5 steps in a single cycle. If each instruction is offset
+    by one stage from four other instructions, each operation can be done on time for a different instruction
+    at the same time. A system is said to be fully pipelined if it can fetch a new instruction (complete an instruction)
+    every cycle\\
+    
+    A pipeline can be made deeper to accomodate more instructions, but this also involves being able 
+    to compute as many stages of the instruction in parallel. Doing this takes more circuitry and increases 
+    the complexity of the system. A deeper pipeline also invariably increases hazard events, which are the 
+    cause of the diminishing returns of a deep pipeline\\
+
+\pagebreak
+
+\section{Hazards}
+    
+    A pipeline hazard describes any event where the next instruction cannot execute in the next cycle. 
+    Usually, hazards come in the form of data hazards, branching hazards, and structural hazards. Data hazards
+    occur when execution of different stages cannot be done until one is complete. The order of the pipeline can 
+    matter when, for example there is a read occuring before the read. When two instructions are pipelined, these 
+    two operations are done out of order and create a hazard. In addition to dependancies, there will also be an issue
+    if two write operations occur in a single place in memory. The OS should detect this and handle accordingly, but 
+    it is an architectural race-condition. A structural hazard is simpler, and occurs when two instructions, executed out of order
+    both request the use of the same hardware. Branching hazards occur because the pipeline does not know the ourcome of the 
+    branch, and doesn't know anything about control flow. There are ways to handle this, but conceptually all branches are hazards. //
+    To prevent potential hazards, pipeline bubbling can be done. Control logic analyzes the incoming instruction to determine
+    if a hazard will occur, and inserts NOPs into the pipeline to stall the execution of problematic instructions. The pipeline 
+    may also utilize out-of-order execution of the instructions. Like a architectural-level JIT compilation of the instructions.
+    Control logic determines what instructions can be done out of order to minimize hazards. x86 minimizes branch hazards by using 
+    branch prediction to guess the branch path before the instruction goes through the pipeline.\\
+
+\pagebreak
+
+\section{}
+    
+\pagebreak
+
+\end{document}
