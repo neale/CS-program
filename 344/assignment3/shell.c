@@ -36,8 +36,11 @@ void init(void) {
 char *read_line(void) {
     char *line = 0;
     size_t size = 0;
-    getline(&line, &size, stdin);
-    //printf("%s\n\n", line);
+    int status;
+    status = getline(&line, &size, stdin);
+    if (status == -1) {
+        return NULL;
+    }
     return line;
 }
 char **parse(char *line) {
@@ -47,7 +50,7 @@ char **parse(char *line) {
     char **tokens = malloc(size * sizeof(char*));
 
     token = strtok(line, " \t\n\r");
-    if (token[0] == '#') {
+    if (token[0] == '#' || token[0] == '\0') {
         return NULL; 
     }
     while (token != NULL) {
