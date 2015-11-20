@@ -113,7 +113,7 @@ int __ls(char **args) {
     return last_exit;
 }
 int __exit(char **args){
-    last_exit = 0;
+    last_exit = -1;
     return last_exit;
 }
 int __status(char **args) {
@@ -136,7 +136,7 @@ int pool(char **args) {
 }
 void shell(void) {
     int status = 1;
-    while(status) {
+    while(status != -1) {
         printf(": ");
         char *line;
         char **args;
