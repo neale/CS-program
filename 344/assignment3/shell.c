@@ -68,12 +68,12 @@ int spawn(char **args) {
     pid = fork();
     if (pid == 0) {
         if (execvp(args[0], args) == -1) {
-            perror("child init");
+            perror("smallish: ");
         }
         last_exit = 1;
         exit(1);
     } else if (pid < 0) {
-        perror("child error");
+        perror("smallish: ");
     } else {
         do {
             wpid = waitpid(pid, &status, WUNTRACED);
@@ -87,7 +87,7 @@ int __cd(char **args) {
         fprintf(stderr, "EnTerm: expected argument to \"cd\"\n");
     } else {
         if (chdir(args[1]) != 0) {
-            perror("EnTerm");  
+            perror("smallish: ");  
         }
     }
     last_exit = 0;
@@ -107,7 +107,7 @@ int __ls(char **args) {
             printf ("%s\n", dir->d_name);
         }
     } else {
-        perror("ls error");
+        perror("smallish: ");
     }
     last_exit = 0;
     return last_exit;
