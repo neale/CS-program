@@ -37,7 +37,7 @@ char *read_line(void) {
     char *line = 0;
     size_t size = 0;
     getline(&line, &size, stdin);
-    printf("%s\n\n", line);
+    //printf("%s\n\n", line);
     return line;
 }
 char **parse(char *line) {
