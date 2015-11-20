@@ -41,6 +41,7 @@ char *read_line(void) {
     if (status == -1) {
         return NULL;
     }
+    printf("status : %d\n", status);
     return line;
 }
 char **parse(char *line) {
