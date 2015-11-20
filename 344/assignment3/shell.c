@@ -124,7 +124,7 @@ int __status(char **args) {
 int pool(char **args) {
     int i = 0;
     if (args[0] == NULL) {
-        last_exit = 1;
+        last_exit = 0;
         return last_exit;
     }
     for (i = 0; i < 4; i++) {
