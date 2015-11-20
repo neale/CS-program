@@ -111,9 +111,9 @@ int __ls(char **args) {
 int __exit(char **args){
     return 0;
 }
-/*int _builtin_status(char **args) {
-
-}*/
+int __status(char **args) {
+    return last_exit;
+}
 int pool(char **args) {
     int i = 0;
     if (args[0] == NULL) {
