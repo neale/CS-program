@@ -31,7 +31,7 @@ int (*_builtins[])(char**) = {
 };
 void init(void) {
     system("clear");
-    puts("Welcome to Enterm\n");
+    puts("Welcome to Enterm");
 }
 char *read_line(void) {
     char *line = 0;
