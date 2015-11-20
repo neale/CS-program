@@ -30,7 +30,7 @@ int (*_builtins[])(char**) = {
     &__status
 };
 void init(void) {
-    system("cls");
+    system("clear");
     puts("Welcome to Enterm\n");
 }
 char *read_line(void) {
