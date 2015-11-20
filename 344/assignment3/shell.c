@@ -47,6 +47,9 @@ char **parse(char *line) {
     char **tokens = malloc(size * sizeof(char*));
 
     token = strtok(line, " \t\n\r");
+    if (token[0] == '#') {
+        return NULL; 
+    }
     while (token != NULL) {
         tokens[pos] = token;
         pos++;
@@ -67,6 +70,7 @@ int spawn(char **args) {
         if (execvp(args[0], args) == -1) {
             perror("child init");
         }
+        last_exit = 1;
         exit(1);
     } else if (pid < 0) {
         perror("child error");
@@ -75,7 +79,7 @@ int spawn(char **args) {
             wpid = waitpid(pid, &status, WUNTRACED);
         } while (!WIFEXITED(status) && !WIFSIGNALED(status));    
     }
-    last_exit = 1;
+    last_exit = 0;
     return last_exit;
 }
 int __cd(char **args) {
@@ -86,7 +90,7 @@ int __cd(char **args) {
             perror("EnTerm");  
         }
     }
-    last_exit = 1;
+    last_exit = 0;
     return last_exit;
 }
 int __ls(char **args) {
@@ -105,13 +109,16 @@ int __ls(char **args) {
     } else {
         perror("ls error");
     }
-    last_exit = 1;
+    last_exit = 0;
     return last_exit;
 }
 int __exit(char **args){
-    return 0;
+    last_exit = 0;
+    return last_exit;
 }
 int __status(char **args) {
+    printf("exit status %d\n", last_exit);
+    last_exit = 0;
     return last_exit;
 }
 int pool(char **args) {
@@ -135,7 +142,9 @@ void shell(void) {
         char **args;
         line = read_line();
         args = parse(line);
-        status = pool(args);
+        if (args) {
+            status = pool(args);
+        }
         free(line);
         free(args);
     }
