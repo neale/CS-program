@@ -1,9 +1,7 @@
 TARGET = template
-#CODE = assignment1
-#HTML = main_html
 default: all
 
-all: pdf code
+all: pdf 
 
 dvi: ${TARGET}.tex
 	latex ${TARGET}.tex
