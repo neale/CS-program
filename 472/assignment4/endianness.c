@@ -29,6 +29,19 @@ int main(int argc, char **argv) {
     p_val[1] = 0x34;
     printf("Kevins example: %x\n", val);
 
+    #if defined(__BYTE_ORDER__)&&(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+         p_val[0] = 0x12;
+         p_val[1] = 0x34;
+         printf("Big Endian: %x\n", val);
+    #elif defined(__BYTE_ORDER__)&&(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)    
+        p_val[0] = 0x34;
+        p_val[1] = 0x12;
+        printf("Little Endian: %x\n", val);
+    #else 
+        print("how did you get here\n");
+    #endif
+
+
     Data order;
     short temp = 0x1234;
     order.p[0] = (temp & SHIFT1) >> (BYTES - 8);

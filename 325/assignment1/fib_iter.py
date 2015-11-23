@@ -1,4 +1,4 @@
-import sys 
+import sys
 import timeit
 
 def fib_iter(n):
