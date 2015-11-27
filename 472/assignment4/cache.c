@@ -34,7 +34,7 @@ int check_cache(){
     while (stride < SIZE_ARR) {
         a = rdtsc();
         count = 0;
-        for(i = 0; i < stride; i+=128) {
+        for(i = 0; i < stride; i++) {
             huge[i]++;
             count++;
         }
