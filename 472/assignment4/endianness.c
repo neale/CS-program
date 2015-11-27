@@ -15,7 +15,6 @@ typedef union {
 
 } Data;
 
-
 int main(int argc, char **argv) {
     short val;
     char *p_val;
@@ -29,6 +28,7 @@ int main(int argc, char **argv) {
     p_val[1] = 0x34;
     printf("Kevins example: %x\n", val);
 
+    printf("\nPART 3 **Ordering Through Compiler directives**\n");
     #if defined(__BYTE_ORDER__)&&(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
          p_val[0] = 0x12;
          p_val[1] = 0x34;
@@ -41,16 +41,12 @@ int main(int argc, char **argv) {
         print("how did you get here\n");
     #endif
 
-
+    printf("\nPART 4 **Ordering Through Union Access**\n");
     Data order;
     short temp = 0x1234;
-    order.p[0] = (temp & SHIFT1) >> (BYTES - 8);
-    order.p[1] = (temp & SHIFT2) >> (BYTES - 16);
-    printf("Vals ordered: %x %x\n", order.p[0], order.p[1]);
+    order.p[0] = (temp & SHIFT2) >> (BYTES - 16);
+    order.p[1] = (temp & SHIFT1) >> (BYTES - 8);
     printf("short val: %x", order.val);
-   
-
-    
      
     return 0;
 }
