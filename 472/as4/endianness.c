@@ -4,10 +4,7 @@
 #define SHIFT1  (0xFF << (BYTES - 8))
 #define SHIFT2  (0xFF << (BYTES - 16))
 
-/* union to hold the bytes in a:
- * short
- * and unsigned chars as ccomposed by a struct
- */
+
 typedef union {
     unsigned char p[2];
     short val;
@@ -15,10 +12,11 @@ typedef union {
         unsigned char p_high;
         unsigned char p_low;
     } vals;
+
 } Data;
 
 int main(int argc, char **argv) {
-    short val; //value to fill
+    short val;
     char *p_val;
     p_val = (char *) &val;
     /*
@@ -30,12 +28,6 @@ int main(int argc, char **argv) {
     p_val[1] = 0x34;
     printf("Kevins example: %x\n", val);
 
-    /* uses a compiler directive:
-     * looks for a defined macro in gcc, 
-     * selecs Byte order, and if hats defined then it looks for BIG/LITTLE ENDIAN
-     * then popuates the short sequentially
-     * avoids cost of branching normally
-     */
     printf("\nPART 3 **Ordering Through Compiler directives**\n");
     #if defined(__BYTE_ORDER__)&&(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
          p_val[0] = 0x12;
@@ -48,7 +40,7 @@ int main(int argc, char **argv) {
     #else 
         print("how did you get here\n");
     #endif
-    /* orders the bytes at runtime */
+
     printf("\nPART 4 **Ordering Through Union Access**\n");
     Data order;
     short temp = 0x1234;

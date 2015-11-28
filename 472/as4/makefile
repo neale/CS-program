@@ -1,26 +1,20 @@
-TARGET=template
-CODE1=endianness
-CODE2=cache
-
+TARGET = template
+#CODE = assignment1
+#HTML = main_html
 default: all
 
-all: endian cache pdf
+all: pdf code
 
 dvi: ${TARGET}.tex
 	latex ${TARGET}.tex
-
 ps: dvi
 	dvips -R -Poutline -t letter ${TARGET}.dvi -o ${TARGET}.ps
 
 pdf: ps
 	ps2pdf ${TARGET}.ps
 
-endian: ${CODE1}
-	gcc ${CODE1}.c -o endian
-
-cache: ${CODE2}
-	gcc ${CODE2}.c -o cache
-	
+#code: ${CODE}.c
+#	gcc ${CODE}.c
 	
 
 clean-dvi:
