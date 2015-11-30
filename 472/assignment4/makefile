@@ -16,7 +16,7 @@ pdf: ps
 	ps2pdf ${TARGET}.ps
 
 endian: ${CODE1}
-	gcc ${CODE1}.c -o endian
+	/usr/local/common/gcc-4.9.0/bin/gcc -Wall -O0 ${CODE1}.c -o endian -lm -std=c99
 
 cache: ${CODE2}
 	gcc ${CODE2}.c -o cache
