@@ -1,10 +1,10 @@
 
-PRG            =m128
+PRG           =m48
 #PRG            =led_display_test
 
-OBJ            = $(PRG).o twi_master.o lcd_code.o notes.o LCDDriver.o
+OBJ            = $(PRG).o 
 
-MCU_TARGET     = atmega128
+MCU_TARGET     = atmega48
 OPTIMIZE       = -O2    # options are 1, 2, 3, s
 CC             = avr-gcc
 F_CPU          = 16000000UL
@@ -36,7 +36,7 @@ clean:
 #setup for for USB programmer
 #may need to be changed depending on your programmer
 program: $(PRG).hex
-	sudo avrdude -F -c usbasp -p m128 -e -U flash:w:$(PRG).hex  -v
+	sudo avrdude -F -c usbasp -p m48  -e -U flash:w:$(PRG).hex  -v
 
 lst:  $(PRG).lst
 
