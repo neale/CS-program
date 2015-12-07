@@ -91,7 +91,7 @@ void put_header_msg(char * msg, char * crypt_key, char * data, char * cryptxt, c
 void get_header(int sock, int *isvalid, int *size) {
 
     int err = 0;
-    char checksum[2] = {0};
+    char checksum[2];
     char msg[10] = {0};
     read(sock, checksum, 2);
     if (strcmp(checksum, "#;") == 0) {
