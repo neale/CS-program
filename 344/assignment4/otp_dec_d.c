@@ -65,7 +65,7 @@ void put_header_msg(char * msg, char * crypt_key, char * data, char * cryptxt, c
         }
         header_msg[9] = '\0';
     }
-    snprintf(header, 102, "#;%s", header_msg);       
+    snprintf(header, 102, "$;%s", header_msg);       
     snprintf(msg, 100000, "%s",  cryptxt);
     
     /* write header */
@@ -93,7 +93,7 @@ void get_header(int sock, int *isvalid, int *size) {
     char checksum[2] = {0};
     char msg[10] = {0};
     read(sock, checksum, 2);
-    if (strcmp(checksum, "#;") == 0) {
+    if (strcmp(checksum, "$;") == 0) {
         *isvalid = TRUE;
     }
     err = read(sock, msg, 10);
@@ -167,7 +167,7 @@ void deploy(Host * host, int argc, char **argv) {
     host->host_addr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(host->sock, (struct sockaddr *) &(host->host_addr), sizeof(host->host_addr)) < 0) {
-        fprintf(stderr, "OTP_ENC_D: ERROR on binding");
+        fprintf(stderr, "otp_dec_d: Could not bind..\n");
     }
 }
 

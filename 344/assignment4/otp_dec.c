@@ -77,7 +77,7 @@ void put_msg(char * msg, char * header, char ** args, int sock) {
         }
         header_msg[9] = '\0';
     }
-    snprintf(header, 102, "#;%s", header_msg);
+    snprintf(header, 102, "$;%s", header_msg);
     err = 1;
     while (err != 0) {
         memcpy(buf, msg+i, 100);
@@ -96,7 +96,7 @@ void get_header(int sock, int *isvalid, int *size) {
     char checksum[2] = {0};
     char msg[10] = {0};
     read(sock, checksum, 2);
-    if (strcmp(checksum, "#;") == 0) {
+    if (strcmp(checksum, "$;") == 0) {
         *isvalid = TRUE;
     }
     err = read(sock, msg, 10);

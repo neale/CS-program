@@ -97,6 +97,9 @@ void get_header(int sock, int *isvalid, int *size) {
     if (strcmp(checksum, "#;") == 0) {
         *isvalid = TRUE;
     }
+    else {
+      fprintf(stderr, "checksum should not be: %s\n", checksum);
+    }     
     err = read(sock, msg, 10);
     msg[err] = '\0';
     *size = atoi(msg);
@@ -159,6 +162,9 @@ void deploy(Host * host, int argc, char **argv) {
         fprintf(stderr, "opt_enc_d: no port given..\n");
     }
     host->sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (host->sock < 0) {
+        fprintf(stderr, "otp_enc_d: could not open socket..\n");
+    }    
     memset((char *) &(host->host_addr), 0, sizeof(host->host_addr));
 
     host->port = atoi(argv[1]); 
@@ -168,7 +174,7 @@ void deploy(Host * host, int argc, char **argv) {
     host->host_addr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(host->sock, (struct sockaddr *) &(host->host_addr), sizeof(host->host_addr)) < 0) {
-        fprintf(stderr, "OTP_ENC_D: ERROR on binding");
+        fprintf(stderr, "otp_enc_d: Could not bind..\n");
     }
 }
 
@@ -225,7 +231,7 @@ void connect_out(Host * host) {
     host->client_size = sizeof(host->client_addr);
     fsock = accept(host->sock, (struct sockaddr *) &(host->client_addr), &(host->client_size));
     if (fsock < 0) {
-        fprintf (stderr, "otp_end_d: could not connect..\n");
+        fprintf (stderr, "otp_enc_d: could not connect..\n");
     }
     spawn(host, fsock);
 }
