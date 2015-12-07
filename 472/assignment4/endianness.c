@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
         p_val[1] = 0x12;
         printf("Little Endian: %x\n", val);
     #else 
-        print("how did you get here\n");
+    //    printf("how did you get here\n");
     #endif
     /* orders the bytes at runtime */
     printf("\nPART 4 **Ordering Through Union Access**\n");
@@ -58,3 +58,4 @@ int main(int argc, char **argv) {
      
     return 0;
 }
+
