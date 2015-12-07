@@ -7,4 +7,4 @@ for i in range(3):
     f.write(nums)
     f.close()
 a, b = random.randint(1, 43), random.randint(1, 43)
-print "{}, {}\n{}".format(a, b, a*b)
+print a, b,"\n",a*b

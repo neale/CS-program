@@ -2,44 +2,61 @@
 // Neale Ratzlaff
 // 11.12.08
 
-#define F_CPU 16000000 // cpu speed in hertz 
+#define F_CPU 8000000UL // cpu speed in hertz 
 
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <string.h>
+#include "lm73_functions_skel.h"
+#include "twi_master.h"
 
-#define USART_BAUDRATE 57600  
+#define BAUD 9600
+#define UBRR F_CPU/16/BAUD-1
+
 //Compute baudvalue at compile time from USART_BAUDRATE and F_CPU
-#define BAUDVALUE  ((F_CPU/(USART_BAUDRATE * 16UL)) - 1 )
 
 char uart_tx_buf[40];      //holds string to send to crt
 char uart_rx_buf[40];      //holds string that recieves data from uart
 
 
-#define LCD_DATA(d) {           \
-    SPDR = 0x01;                \
-    while (!(SPSR & 0xSPIF)) {}   \
-    SPDR = (d);                 \
-    while (!(SPSR & 0xSPIF0)) {}   \
-    PORTF |= 0x08;              \
-    PORTF &= ~0x08;             \
+char uart_arr[16];  //holds a string to refresh the LCD
+uint8_t i;                     //general purpose index
+
+//delclare the 2 byte TWI read and write buffers (lm73_functions_skel.h)
+extern uint8_t lm73_wr_buf[2]; //keep this internal, only write a little
+extern uint8_t lm73_rd_buf[2];
+#define FOSC 
+#define BAUD 9600
+#define MYUBRR FOSC/16/BAUD-1
+
+void uart_init(void){
+
+    /*Set baud rate */
+    int ubrr = UBRR;
+    UBRR0H = (unsigned char)(ubrr>>8);
+    UBRR0L = (unsigned char)ubrr;
+    /* Enable receiver and transmitter */
+    UCSR0B = (1<<RXEN0) | (1<<TXEN0);
+    /* Set frame format: 8data, 2stop bit */
+    UCSR0C = (1<<USBS0) | (1<<UCSZ00) | (1 << UCSZ01);
 }
 
-// RS bit = 0
-#define LCD_CMD(c) {            \
-    SPDR = 0x00;                \
-    while (!(SPSR & SPIF)) {}   \
-    SPDR = (c);                 \
-    while (!(SPSR & SPIF)) {}   \
-    PORTF |= 0x08;              \
-    PORTF &= ~0x08;             \
+unsigned char uart_receive(void) {
+    /* Wait for data to be received */
+    while (!(UCSR0A & (1<<RXC0))) ;
+
+    /* Get and return received data from buffer */
+    return UDR0;
 }
 
 void uart_putc(char data) {
-    while (!(UCSR0A&(1<<UDRE0)));    // Wait for previous transmissions
-    UDR0 = data;    // Send data byte
-    while (!(UCSR0A&(1<<UDRE0)));    // Wait for previous transmissions
+
+    /* Wait for empty transmit buffer */
+    while ( !( UCSR0A & (1<<UDRE0)) );
+    /* Put data into buffer, sends the data */
+    UDR0 = data;
+    /* Wait for data to be received */
 }
 //******************************************************************
 
@@ -54,68 +71,58 @@ void uart_puts(char *str) {
         i++;
     }
 }
+void uart_flush( void ){
 
-//Initialize Timer/Counter 0
-/*void init_clk() {
-
-    ASSR   |= (1<<AS0); //use ext oscillator
-    TCCR0  |= (1<<CS00) | (1<<WGM01); //start clock no prescale with CTC mode
-    TIMSK  |= (1<<OCIE0); //enable output compare match interrupt
-    OCR0    = 32;
-
-    TCCR2  |= (1 << WGM20) | (1 << WGM21) | (1 << CS20);
-    TCCR2  |= (1 << COM20) | (1 << COM21);
-    OCR2    = 1;   
-
-    // Used a fast PWM where duty cycle and frequency can be changed. 
-    // For volume control
-    TCCR3A |= (1 << COM3A1) | (1 << WGM31) | (1 << CS30); 
-    TCCR3B |= (1 << WGM33) | (1 << CS30) | (1 << WGM32);
-    OCR3A   = 0x3000; //volume range
-    ICR3    = 0x4000;
-}*/
-/* initialize to 125 kHz (datasheet), using VCC for reference,
- * 8 bit resolution, and then do the first conversion (init) 
- */
-/*void init_adc() {
-
-    DDRF   &= ~(1 << PF0);
-    ADCSRA |=  (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2);
-    ADMUX  |=  (1 << REFS0) | (1 << ADLAR);  
-    ADCSRA |=  (1 << ADEN); // do the first conversion
-}*/
-/*
-void init_spi() {
-    SPCR |= (1<<SPE) | (1<<MSTR); //Enable SPI and set as master
-    SPSR |= (1<<SPI2X); //Enable double SPI speed for master mode
-
+    unsigned char dummy;
+    while ( UCSR0A & (1<<RXC0) ) dummy = UDR0;
 }
-*/
-void uart_init(void) {
 
-    UCSR0B |= (1 << RXEN0) | (1 << TXEN0);
-    //async operation, no parity,  one stop bit, 8-bit characters
-    UCSR0C |= (1<<UCSZ01) | (1<<UCSZ00);
-    UBRR0H = (BAUDVALUE >>8 ); //load upper byte of the baud rate into UBRR 
-    UBRR0L =  BAUDVALUE;       //load lower byte of the baud rate into UBRR 
+void twi_thermo(void) {
+     
+    uint16_t lm73_temp;  //a place to assemble the temperature from the lm73
+    unsigned int celsius = 0;
+    //set LM73 mode for reading temperature by loading pointer register
+    //this is done outside of the normal interrupt mode of operation 
+    lm73_wr_buf[0] = LM73_PTR_TEMP;   //load lm73_wr_buf[0] with temperature pointer address
+    twi_start_wr(LM73_ADDRESS, lm73_wr_buf, 1); //start the TWI write process (twi_start_wr())
 
+    _delay_ms(2);      //wait for the xfer to finish
+    sei();
+    while(1){          //main while loop
+
+        _delay_ms(100);  //tenth second wait
+        twi_start_rd(LM73_ADDRESS, lm73_rd_buf, 2); //read temp
+        _delay_ms(2);    //wait for it to finish
+
+        //now assemble the two bytes read back into one 16-bit value
+        lm73_temp =  lm73_rd_buf[0]<<8;//save high temperature byte into lm73_tem //shift it into upper byte 
+        lm73_temp |= lm73_rd_buf[1]; //"OR" in the low temp byte to lm73_temp 
+        celsius = lm73_temp/128;
+        //convert to string in array with itoa() from avr-libc 0 Farhanheit 1 Celcius
+        //lm73_temp_convert(temp, lm73_temp, 1);
+        
+        //itoa(temp[0], string, 10);//
+        //itoa(temp[1], string2, 10);
+        //memcpy(uart_arr, string, sizeof(string));
+        //memcpy(uart_arr+4, ".", 1);
+        //memcpy(uart_arr+5, string, sizeof(string2));
+        while(1) {
+            uart_putc('c');
+            _delay_ms(100);
+            uart_putc('a');
+            _delay_ms(100);
+            uart_putc('t');
+            _delay_ms(100);
+        }
+    } //while
 }
 
 int main(void) {
 
-    /*init_spi();
-    init_clk();
-    init_adc();
-    LCD_Init();
-    sei();
-    */
     DDRD |= (1 << PD1);
     uart_init();
-    while(1){
-        
-        uart_puts("HAHAHAHA");
-    }
-    //cli();
+    init_twi();
+    twi_thermo();
     return 0;
 
 }//main

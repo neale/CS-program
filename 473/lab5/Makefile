@@ -2,7 +2,7 @@
 PRG            =m128
 #PRG            =led_display_test
 
-OBJ            = $(PRG).o twi_master.o lcd_code.o notes.o LCDDriver.o
+OBJ            = $(PRG).o lcd_code.o notes.o LCDDriver.o thermo3_skel.o lm73_functions_skel.o twi_master.o
 
 MCU_TARGET     = atmega128
 OPTIMIZE       = -O2    # options are 1, 2, 3, s

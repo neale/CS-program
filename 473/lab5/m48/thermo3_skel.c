@@ -12,7 +12,7 @@
 #include <util/delay.h>
 #include <string.h>
 #include <stdlib.h>
-#include "lcd_functions.h"
+//#include "lcd_functions.h"
 #include "lm73_functions_skel.h"
 #include "twi_master.h"
 
@@ -39,12 +39,12 @@ void spi_init(void){
 /***********************************************************************/
 /*                                main                                 */
 /***********************************************************************/
-void thermo(void) {
-
+void twi_thermo(void)
+{     
     uint16_t lm73_temp;  //a place to assemble the temperature from the lm73
 
     spi_init();   //initalize SPI 
-    lcd_init();   //initalize LCD (lcd_functions.h)
+//    lcd_init();   //initalize LCD (lcd_functions.h)
     init_twi();   //initalize TWI (twi_master.h)  
 
     //set LM73 mode for reading temperature by loading pointer register
@@ -54,7 +54,7 @@ void thermo(void) {
 
     _delay_ms(2);      //wait for the xfer to finish
 
-    clear_display();   //clean up the display
+//    clear_display();   //clean up the display
     sei();             //enable interrupts before entering loop
 
     uint8_t temp[2] = {0};
@@ -64,7 +64,7 @@ void thermo(void) {
     while(1){          //main while loop
 
         _delay_ms(100);  //tenth second wait
-        clear_display(); //wipe the display
+//        clear_display(); //wipe the display
         twi_start_rd(LM73_ADDRESS, lm73_rd_buf, 2); //read temp
         _delay_ms(2);    //wait for it to finish
 
@@ -81,6 +81,6 @@ void thermo(void) {
         memcpy(lcd_string_array, string, sizeof(string));
         memcpy(lcd_string_array, ".", 1);
         memcpy(lcd_string_array+5, string, sizeof(string2));
-        string2lcd(lcd_string_array); //send the string to LCD (lcd_functions)
+//        string2lcd(lcd_string_array); //send the string to LCD (lcd_functions)
     } //while
 } //main

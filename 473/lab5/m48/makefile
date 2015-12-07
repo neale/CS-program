@@ -1,13 +1,13 @@
 
-PRG           =m48
+PRG            =m48
 #PRG            =led_display_test
 
-OBJ            = $(PRG).o 
+OBJ            = $(PRG).o twi_master.o lm73_functions_skel.o
 
 MCU_TARGET     = atmega48
-OPTIMIZE       = -O2    # options are 1, 2, 3, s
+OPTIMIZE       = -O1    # options are 1, 2, 3, s
 CC             = avr-gcc
-F_CPU          = 16000000UL
+F_CPU          = 8000000UL
 
 override LDFLAGS       = -Wl,-Map,$(PRG).map
 override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS) -DF_CPU=$(F_CPU)
@@ -36,7 +36,7 @@ clean:
 #setup for for USB programmer
 #may need to be changed depending on your programmer
 program: $(PRG).hex
-	sudo avrdude -F -c usbasp -p m48  -e -U flash:w:$(PRG).hex  -v
+	sudo avrdude -F -c usbasp -p m48 -e -U flash:w:$(PRG).hex  -v
 
 lst:  $(PRG).lst
 
