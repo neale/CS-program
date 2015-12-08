@@ -35,12 +35,13 @@ int connect_sock(char **data) {
 }
 
 void put_header(int sock, char * header) {
-
     int err = 0;
-    err = write(sock, header, sizeof(header));
-
+    printf("writing header now ENC\n");
+    err = write(sock, header, strlen(header));
+    
     if (err < 0) {
         fprintf(stderr, "otp_enc: could not write header to socket..");
+        exit(-1);
     }
 }
 
@@ -54,50 +55,76 @@ void put_msg(char * msg, char * header, char ** args, int sock) {
     char key[100000]    = {0};
     char data[100000]   = {0};
     char header_msg[10] = {0};
-
-    memset(msg, 0, 1000000);
-    fkey   = open(args[2], O_RDONLY);
     fdata  = open(args[1], O_RDONLY);
+    int data_size = read(fdata, data, 100000);    
+    for (i = 0; i < strlen(data); i++){
+        if (data[i] == '\n') {
+            data[i] = '\0';
+            break;
+        }
+    }    
 
-    for (i = 0; i < sizeof(key); i++) {
+    fkey   = open(args[2], O_RDONLY);
+    int key_size = read(fkey, key, 100000);
+    for (i = 0; i < strlen(key); i++){
         if (key[i] == '\n') {
             key[i] = '\0';
             break;
         }
-    }   
-
-    int msg_size = sizeof(key) + sizeof(data) + 1;
+    }    
+    memset(msg, 0, 1000000);
+    printf("key: %s, data: %s\n", key, data);
+    
+    int msg_size = strlen(key) + strlen(data) + 1;
+    
     snprintf(header_msg, 10, "%i", msg_size);
-    snprintf(msg, sizeof(msg), "%s;%s", key, data);
-
+    snprintf(msg, 1000000, "%s;%s", key, data);
+    printf("msg: %s\n", msg); 
+    
+    printf("getting header msg ENC\n");
+    
     for (i = 0; i < 10; i++) {
         if (!isdigit(header_msg[i])) {
             header_msg[i] = ' ';
         }
-        header_msg[9] = '\0';
+        header_msg[10] = '\0';
     }
+    printf("header message: %s\n", header);
     snprintf(header, 102, "#;%s", header_msg);
     err = 1;
-    while (err != 0) {
+   
+    put_header(sock, header);
+    printf("read through socket ENC\n");
+    do {
+        memset(buf, 0, 100);
         memcpy(buf, msg+i, 100);
         i += 100;
-        buf[99] = '\0';
-        err = write(sock, buf, sizeof(buf));
+        buf[100] = '\0';
+        err = write(sock, buf, strlen(buf));
         if (err < 0) {
             fprintf(stderr, "otp_enc: Could not write to socket..\n");
+            exit(-1);
         }
-    }
+    } while(err != 0);
+
+    printf("buf: %s\n", buf); 
+    printf("done putting msg ENC\n");
 } 
 
 void get_header(int sock, int *isvalid, int *size) {
 
     int err = 0;
-    char checksum[2] = {0};
-    char msg[10] = {0};
+    char checksum[2];
+    char msg[10];
+    printf("reading sock\n");
     read(sock, checksum, 2);
     if (strcmp(checksum, "#;") == 0) {
         *isvalid = TRUE;
+        printf("is valid\n");
     }
+    else {
+        printf("is not valid\n");
+    }     
     err = read(sock, msg, 10);
     msg[err] = '\0';
     *size = atoi(msg);
@@ -107,17 +134,20 @@ void get_msg(char * msg, int size, int sock) {
 
     int bytes        = 0;
     int bytes_read   = 0;  
-    int checksum[10] = {0};
-    char buf[100]    = {0};
+    char buf[100];
 
     while (bytes_read < size) {
-
-        bytes += read(sock, checksum, 2);
+        bytes = 0;
+        bytes = read(sock, buf, 100);
         if (bytes < 0) {
             fprintf(stderr, "otp_enc: could not read message..");
+            exit(-1);
         }
         buf[bytes] = '\0';
-        strcat(msg, buf);
+        if (bytes != 0) {
+
+            strcat(msg, buf);
+        }    
         bytes_read += bytes;
     }
 }
@@ -129,8 +159,8 @@ int main(int argc, char **argv){
     char crypt_msg[100000] = {0};
     char header[102]       = {0};
 
-    int  msg_size      = 0;
     int  isvalid       = 0;
+    int  msg_size      = 0;
 
     if (argc < 3) {
         fprintf(stderr, "usage: %s [plaintext] [key] <port> \n", argv[0]);
@@ -138,9 +168,11 @@ int main(int argc, char **argv){
     }
 
     sock = connect_sock(argv);
-    put_header(sock, header);
+    printf("putting messgae ENC\n");
     put_msg(msg, header, argv, sock);
+    printf("getting header ENC\n");
     get_header(sock, &isvalid, &msg_size);
+    printf("getting message ENC\n");
     get_msg(crypt_msg, msg_size, sock);
     close(sock);
     return 0;

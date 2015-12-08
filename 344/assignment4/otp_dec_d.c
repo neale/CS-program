@@ -114,7 +114,9 @@ void get_msg(char * msg, int size, int sock) {
             fprintf(stderr, "otp_dec_d: could not read message..");
         }
         buf[bytes] = '\0';
-        strcat(msg, buf);
+        if (bytes != 0) {
+            strcat(msg, buf);
+        }
         bytes_read += bytes;
     }
 }
@@ -123,15 +125,20 @@ void parse(char * msg, int msg_size, int * data_size, int * key_size, char * key
 
     int i = 0;
     int idx = 0;
-    int delim = TRUE;
+    int delim = FALSE;
     int isvalid = FALSE;
 
     for (i = 0; i < msg_size; i++) {
         if (((msg[i] >= 65) && (msg[i] <= 90)) || (msg[i] == 32)) {
             isvalid = TRUE;
         }
-        if (isvalid && msg[i] == ';') {
-            delim = TRUE;            
+        if (isvalid && !delim) {
+            key[i] = msg[i];
+            *key_size = i+1;
+        }    
+        if (!isvalid && (msg[i] == ';')) {
+            delim = TRUE;     
+            continue;       
         }
         if (isvalid && delim) {
             data[idx] = msg[i];

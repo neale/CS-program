@@ -78,6 +78,9 @@ void put_msg(char * msg, char * header, char ** args, int sock) {
         header_msg[9] = '\0';
     }
     snprintf(header, 102, "$;%s", header_msg);
+    
+    put_header(sock, header);
+    
     err = 1;
     while (err != 0) {
         memcpy(buf, msg+i, 100);
@@ -139,7 +142,6 @@ int main(int argc, char **argv){
     }
 
     sock = connect_sock(argv);
-    put_header(sock, header);
     put_msg(msg, header, argv, sock);
     get_header(sock, &isvalid, &msg_size);
     get_msg(crypt_msg, msg_size, sock);
