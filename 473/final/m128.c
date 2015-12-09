@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include "lm73_functions_skel.h"
 #include "twi_master.h"
+#include "si4734.h"
 
 #define DIG_ONE   0x01
 #define DIG_TWO   0x11
@@ -60,10 +61,13 @@
 #define CLEAR(x) (x = 0x00)
 #define SET(x) (x = 0xFF)
 
+volatile uint16_t radio_presets[8] = {8870, 9990, 10630, 9130, 9190, 9230, 9350, 9470};
 /* state machine for the encoders, 
  * they're either at rest, or moving 
  */
 enum enc_dir {REST, REV, FW};
+enum station {AM, FM, SW};
+volatile enum station current_station;
 typedef enum enc_dir dir;
 
 /* struct to hold all clock data
@@ -136,6 +140,7 @@ int button_pressed = FALSE;        // True for first loop in new state
 
 int temp_mode = FALSE;
 int first_temp = FALSE;
+
 /* buttons that correspond to bar graph modes */
 uint8_t three     = FALSE;
 uint8_t four      = FALSE;
@@ -144,10 +149,36 @@ uint8_t five_old  = FALSE;
 uint8_t six       = FALSE;
 uint8_t seven     = FALSE;
 
-extern char lcd_local_data[17]  = "Local : ";
-extern char lcd_remote_data[17] = "Remote: ";
-int count_to_five = 0;
-int faren = FALSE;
+enum radio_band{FM, AM, SW};
+
+extern volatile enum radio_band current_radio_band;
+
+extern uint16_t eeprom_fm_freq;
+extern uint16_t eeprom_am_freq;
+extern uint16_t eeprom_sw_freq;
+extern uint8_t  eeprom_volume;
+
+extern volatile uint16_t current_fm_freq;
+extern uint16_t current_am_freq;
+extern uint16_t current_sw_freq;
+extern uint8_t  current_volume;
+
+int16_t fm_preset_eeprom;
+uint16_t am_preset_eeprom;
+uint16_t sw_preset_eeprom;
+uint8_t  vol_preset_eeprom;
+
+uint16_t volume  = 0;
+uint16_t am_freq = 0;
+uint16_t sw_freq = 0;
+volatile uint16_t fm_freq = 0;
+volatile uint16_t fm_freq_temp = 9990;
+
+extern char lcd_local_data[15]  = "Local Temp: ";
+extern char lcd_remote_data[16] = "Remote Temp: ";
+extern char lcd_radio_data[32]  = {0};
+extern uint8_t si4734_status[8]; 
+
 uint8_t debounce_switch(button) {
 
     static uint16_t state[8] = {0}; //holds present state
@@ -157,35 +188,6 @@ uint8_t debounce_switch(button) {
     }
     return 0;
 }
-unsigned char uart_receive(){
-
-    int timer = 0;
-    /* Wait for data to be received */
-    while (!(UCSR1A & (1<<RXC1))){
-        timer++;
-        if (timer >= 4000) {
-            return 0;
-        }
-    }
-    /* Get and return received data from buffer */
-    return UDR1;
-}
-void uart_putc(unsigned char data){
-    /* Wait for empty transmit buffer */
-    while (!( UCSR1A & (1<<UDRE1)));
-    /* Put data into buffer, sends the data */
-    UDR1 = data;
-}
-
-void uart_puts(unsigned char * data){
-    /* Wait for empty transmit buffer */
-    int i = 0;
-    while (data[i] != NULL) {
-        uart_putc(data[i]);
-        i++;       
-    }
-}
-
 void scan(void) {
 
     int i = 0;
@@ -555,19 +557,8 @@ ISR(TIMER0_COMP_vect) {
         LCD_PutStr("ALARM!!");
         alarm_disp = TRUE;
     }
-    clock.seconds++;  //ms really            if ((clock.seconds % 1000) == 0) {
-    if ((clock.seconds % 1000) == 0) {
-
-        if (count_to_five == 5) {
-            faren = TRUE;
-            count_to_five = 0;
-        }
-        else {
-            count_to_five++;
-            faren = FALSE;
-        }
-    }
-        /* clock mode
+    clock.seconds++;  //ms really
+    /* clock mode
      * timer counts up by milliseconds for each interrupt
      * checks for equality for the alarm and triggers if equal
      * in snooze mode, times for 10 seconds and triggers alarm at 10s
@@ -576,7 +567,6 @@ ISR(TIMER0_COMP_vect) {
     switch (clock.mode) {
         case(0):
 
-      
             if (clock.seconds == 60000) {
                 clock.seconds = 0;
                 clock.minutesL++;
@@ -835,15 +825,12 @@ ISR(TIMER0_COMP_vect) {
         PORTA = 0x04;
     }
     digit++; 
-    uart_flush(); 
-    uart_putc('s');
 
     if (temp_mode) {// && (uart_displayed == FALSE)) {
         if (first_temp) {
             LCD_Clr();
         }
         first_temp = FALSE;
-        LCD_MovCursorLn1(); 
         LCD_PutStr(lcd_local_data);
         LCD_MovCursorLn2(); 
         LCD_PutStr(lcd_remote_data);
@@ -873,37 +860,80 @@ ISR(USART0_RX_vect){	//USART transmission recieved interrupt
     extern uint8_t lm73_wr_buf[2];
 	extern uint8_t lm73_rd_buf[2];
 	uint16_t lm73_temp;
-    LCD_Clr();
+
     twi_start_rd(LM73_ADDRESS, lm73_rd_buf, 2);  //read the temperature
 	_delay_ms(2);
 	lm73_temp  = lm73_rd_buf[0];    //the high temperature byte
 	lm73_temp  = (lm73_temp << 8);  //push into top byte for return value
 	lm73_temp |= lm73_rd_buf[1];    //temperature bytes are now assembled
 	
-    local_temp = lm73_temp/128;
-    char f[1]; 
-	char test[2];
-    	
-    if (faren) {
-        celsius = ((celsius * 9) / 5) + 32;
-        local_temp = ((local_temp * 9) / 5) + 32;
-    }
-    sprintf(test,"%d",local_temp);	
-    lcd_local_data[8] = test[0];
-	lcd_local_data[9] = test[1];
-    	
-	sprintf(test,"%d",local_temp);	
-    lcd_remote_data[8] = test[0];
-	lcd_remote_data[9] = test[1];
+    celsius = lm73_temp/128;
+    local_temp = celsius;
+    char radio_settings[4];
+	
+	if (preset_enable) {
+		current_fm_freq_temp = presets[preset_index];
+		sprintf(radio_char, "%d", presets[preset_index]);
+	}
+	else	//display regular freq on display
+		sprintf(radio_char, "%d", current_fm_freq);
+	if(current_fm_freq > 9990)	//if it is 4 digits to display
+	{
+		lcd_string_array[26] = radio_char[0];
+		lcd_string_array[27] = radio_char[1];
+		lcd_string_array[28] = radio_char[2];
+		lcd_string_array[30] = radio_char[3];
+	}
+	else				//else its 3 digits
+	{
+		lcd_string_array[26] = ' ';
+		lcd_string_array[27] = radio_char[0];
+		lcd_string_array[28] = radio_char[1];
+		lcd_string_array[30] = radio_char[2];
+	}
 
-    if (faren) {
-        lcd_remote_data[10] = 'F';
-        lcd_local_data[10] = 'F';
-    } else {
-        lcd_remote_data[10] = 'C';
-        lcd_local_data[10] = 'C';
-    }
-    uart_flush();
+	char test[2];
+	
+    sprintf(test,"%d",local_temp);	
+    lcd_local_data[12] = test[0];
+	lcd_local_data[13] = test[1];
+	
+    //lcd_string_array[1][9] = test[0];
+	//lcd_string_array[1][10] = test[1];
+	
+	//lcd_string_array[0][17] = test[0];
+	//lcd_string_array[0][18] = test[1];
+    	
+	sprintf(test,"%d",celsius);	
+    lcd_remote_data[13] = test[0];
+	lcd_remote_data[14] = test[1];
+
+    if (fm_freq != current_fm_freq_temp) {
+		fm_freq = fm_freq_temp;
+		fm_tune_freq();
+	}
+	if ((volume != volume_final) && (fm_prev == 1)) {
+		volume_final = volume;
+		OCR3A = volume_final;
+	}
+	if (fm == 1) {
+		OCR3A = volume_final;
+		fm_pwr_up();
+		for(var = 0; var < 2; var++) {
+			fm_tune_freq();
+			fm_freq = fm_freq_temp;
+		}
+		fm = 2; //default to the "do nothing" case
+	}
+	else if(!fm) {
+		fm = 2; //default to the "do nothing" case
+		radio_pwr_dwn();
+	}
+	if(fm_prev)	{
+		//fm_rsq_status();
+		//sig_strength = si4734_tune_status_buf[5];
+	}
+    
 }
 
 /* timer1 routine to generate the song tones
@@ -966,12 +996,54 @@ void init_uart() {
 	// Set frame format: 8data, 2stop bit 
 	UCSR0C = (1 << USBS0) | (1 << UCSZ01) | (1 << UCSZ00);
 }
-void uart_flush(void)
-{
-    unsigned char dummy;
-    while (UCSR0A & (1<<RXC0)) 
-    dummy = UDR0;
+
+unsigned char uart_receive(){
+
+    int timer = 0;
+    /* Wait for data to be received */
+    while (!(UCSR1A & (1<<RXC1))){
+        timer++;
+        if (timer >= 4000) {
+            return 0;
+        }
+    }
+    /* Get and return received data from buffer */
+    return UDR1;
 }
+void uart_putc(unsigned char data){
+    /* Wait for empty transmit buffer */
+    while (!( UCSR1A & (1<<UDRE1)));
+    /* Put data into buffer, sends the data */
+    UDR1 = data;
+}
+
+void uart_puts(unsigned char * data){
+    /* Wait for empty transmit buffer */
+    int i = 0;
+    while (data[i] != NULL) {
+        uart_putc(data[i]);
+        i++;       
+    }
+}
+
+void init_si4734() {
+
+    EICRB |=  (1 << ISC71) | (1 << ISC70);
+    EIMSK |=  (1 << INT7);
+    //Toggle pins to reset radio board
+    DDRE  |=  (1 << PE2);
+	PORTE &= ~(1 << PE7);
+	DDRE  |=  (1 << PE7);
+	PORTE |=  (1 << PE2);
+    _delay_us(200);
+    PORTE &= ~(1 << PE2);
+    _delay_us(30);
+    DDRE &=  ~(0x80);
+    //default frequency
+	current_fm_freq = 9990;
+}
+
+
 int main() {
 
     DDRB   = 0xF7;
@@ -988,9 +1060,9 @@ int main() {
     init_twi();
     music_init();
     init_uart();
-    uart_flush();
     //music_on();
     LCD_Init();
+    init_si4734();
     sei();
     while(1){}
     cli();

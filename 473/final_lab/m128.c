@@ -4,6 +4,7 @@
 
 #define F_CPU 16000000 // cpu speed in hertz 
 
+#include <math.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
@@ -11,7 +12,7 @@
 #include <stdio.h>
 #include "lm73_functions_skel.h"
 #include "twi_master.h"
-
+#include "si4734.h"
 #define DIG_ONE   0x01
 #define DIG_TWO   0x11
 #define DIG_THREE 0x31
@@ -68,10 +69,10 @@ typedef enum enc_dir dir;
 
 /* struct to hold all clock data
  * Keeps track of :
-       clock time,
-       total seconds passed, 
-       stores time while setting alarm,
-       alarm time
+ clock time,
+ total seconds passed, 
+ stores time while setting alarm,
+ alarm time
  */
 typedef struct {
 
@@ -101,11 +102,47 @@ Clock clock = {0};
  * http://web.engr.oregonstate.edu/~traylor/ece473/example_code/kellen_music.c
  * It took my own work to integrate the timing into my system
  */
-
+int displayed = FALSE;
+int display_mode = FALSE;
+int fm_prev = 0;
+int fm = 0;
 volatile uint8_t song;
 volatile uint16_t beat;
 volatile uint16_t max_beat;
 volatile uint8_t  notes;
+int lcd_displayed = FALSE;
+int radio_display = FALSE;
+//char lcd_radio[7];
+int volume_final = 0;
+int current_fm_freq_temp = 9990;
+enum radio_band{FM, AM, SW};
+volatile enum radio_band current_radio_band;
+volatile uint16_t radio_presets[8] = {8870, 9990, 10630, 9130, 9190, 9230, 9350, 9470};
+uint16_t eeprom_fm_freq;
+
+uint8_t STC_interrupt;     //indicates tune or seek is done
+extern uint8_t  si4734_tune_status_buf[8];
+int frequency = 0;
+char freq_buf[5];
+int frequency_set_mode = FALSE;
+extern volatile uint8_t  twi_state; 
+uint16_t eeprom_am_freq;
+uint16_t eeprom_sw_freq;
+uint8_t  eeprom_volume;
+int radio_mode = FALSE;
+volatile uint16_t current_fm_freq;
+uint16_t current_am_freq;
+uint16_t current_sw_freq;
+uint8_t  current_volume;
+
+uint16_t volume  = 0;
+uint16_t am_freq = 0;
+uint16_t sw_freq = 0;
+volatile uint16_t fm_freq = 0;
+volatile uint16_t fm_freq_temp = 9990;
+
+extern char lcd_radio_data[32]  = {0};
+extern uint8_t si4734_status[8]; 
 
 //Mute is on PORTD
 //set the hex values to set and unset the mute pin
@@ -140,7 +177,7 @@ int first_temp = FALSE;
 uint8_t three     = FALSE;
 uint8_t four      = FALSE;
 uint8_t five      = FALSE;
-uint8_t five_old  = FALSE;
+uint8_t time_old  = FALSE;
 uint8_t six       = FALSE;
 uint8_t seven     = FALSE;
 
@@ -185,6 +222,8 @@ void uart_puts(unsigned char * data){
         i++;       
     }
 }
+int was_freq = FALSE;
+int frequency_is_set = FALSE;
 
 void scan(void) {
 
@@ -196,14 +235,62 @@ void scan(void) {
         if (debounce_switch(i)) {    
             switch(i) {
                 //snooze
+                case(1):
+                    radio_mode = TRUE;
+                    temp_mode = FALSE;
+                    frequency_set_mode = TRUE;
+                    clock.mode = 4;
+                    if(time_old == TRUE) {
+
+                        clock.alarm_hourH   = clock.hoursH;
+                        clock.alarm_hourL   = clock.hoursL;
+                        clock.alarm_minuteH = clock.minutesH;
+                        clock.alarm_minuteL = clock.minutesL;
+
+                        clock.hoursH        = clock.hoursH_old;
+                        clock.hoursL        = clock.hoursL_old;
+                        clock.minutesH      = clock.minutesH_old;
+                        clock.minutesL      = clock.minutesL_old;
+                        if (!was_freq) {
+                            alarm_armed = TRUE;
+                            dot = TRUE;       
+                        }   
+                        clock.mode = 0;
+                    }
+                    else {
+                        /* otherwise enter alarm mode and store clock time */
+                        clock.hoursH_old   = clock.hoursH; 
+                        clock.hoursL_old   = clock.hoursL; 
+                        clock.minutesH_old = clock.minutesH; 
+                        clock.minutesL_old = clock.minutesL;      
+                        time_old = TRUE;          
+                        dot = FALSE; 
+                    }
+                    button_pressed = TRUE;
+                    radio_display = FALSE;
+                    temp_mode = FALSE;
+                    time_old = TRUE;
+                    was_freq = TRUE;
+                    break;
                 case(2):
+                    if (frequency_set_mode) {
+                        frequency_is_set = TRUE;
+                        frequency_set_mode = FALSE;
+                    }
+
+                    radio_display = FALSE;
                     temp_mode = TRUE;
                     first_temp = TRUE;
                     break;
                 case(3):
                     /* display snooze on LCD, adjust volume to off, and set snooze mode */
+                    radio_display = FALSE;
+                    if (frequency_set_mode) {
+                        frequency_is_set = TRUE;
+                        frequency_set_mode = FALSE;
+                    }
                     if(alarm_now) {
-                    
+
                         LCD_Clr();
                         LCD_PutStr("Snoozed");
                         snooze_mode = TRUE;
@@ -218,18 +305,23 @@ void scan(void) {
                     }
                     temp_mode = FALSE;
                     break;
-                //display alarm
+                    //display alarm and freq
                 case(4):
+                    frequency_set_mode = FALSE;
+                    display_mode = FALSE;
                     temp_mode = FALSE;
                     clock.mode = 2;
+                    displayed = FALSE;
                     break;
-                //state is for setting alarm
+                    //state is for setting alarm
                 case (5):
                     /* if we just came from alarm mode,
                      * set the alarm time to the displayed time
                      * grab the old clock time and send to display
                      */
-                    if(five_old == TRUE) {
+                    frequency_set_mode = FALSE;
+                    radio_display = FALSE;
+                    if(time_old == TRUE) {
                         clock.alarm_hourH   = clock.hoursH;
                         clock.alarm_hourL   = clock.hoursL;
                         clock.alarm_minuteH = clock.minutesH;
@@ -239,31 +331,32 @@ void scan(void) {
                         clock.hoursL        = clock.hoursL_old;
                         clock.minutesH      = clock.minutesH_old;
                         clock.minutesL      = clock.minutesL_old;
-                        alarm_armed = TRUE;
-                        dot = TRUE;              
+                        if(!was_freq) {
+                            alarm_armed = TRUE;
+                            dot = TRUE;   
+                        }           
                         clock.mode = 0;
                     }
                     else {
-                    /* otherwise enter alarm mode and store clock time */
+                        /* otherwise enter alarm mode and store clock time */
                         clock.hoursH_old   = clock.hoursH; 
                         clock.hoursL_old   = clock.hoursL; 
                         clock.minutesH_old = clock.minutesH; 
                         clock.minutesL_old = clock.minutesL;      
-                        five_old = TRUE;          
+                        time_old = TRUE;          
                         dot = FALSE; 
                         clock.mode = 1;
                     }
                     button_pressed = TRUE;
                     temp_mode = FALSE;
                     break;
-                
-                /* Mode to return to normal */
+
+                    /* Mode to return to normal */
                 case (6):
-                    if (temp_mode == TRUE) {
-                        temp_mode = FALSE;
-                    }
+                    frequency_set_mode = FALSE;
+
                     /* first set alarm if we came from alarm mode */
-                    if(five_old == TRUE) {
+                    if(time_old == TRUE ) {
                         clock.alarm_hourH   = clock.hoursH;
                         clock.alarm_hourL   = clock.hoursL;
                         clock.alarm_minuteH = clock.minutesH;
@@ -272,10 +365,12 @@ void scan(void) {
                         clock.hoursL        = clock.hoursL_old;
                         clock.minutesH      = clock.minutesH_old;
                         clock.minutesL      = clock.minutesL_old;
-                        alarm_armed = TRUE;
-                        five_old = FALSE;
-                        dot = TRUE;
-                    /* otherwise reset alarm to 0 */
+                        if (!was_freq) {
+                            alarm_armed = TRUE;
+                            dot = TRUE;
+                        }
+                        time_old = FALSE;
+                        /* otherwise reset alarm to 0 */
                     } else {
                         clock.alarm_hourH   = 0;
                         clock.alarm_hourL   = 0;
@@ -297,16 +392,22 @@ void scan(void) {
                     music = FALSE;
                     music_off();
                     clock.mode = 0;
-                    five_old = FALSE;
+                    time_old = FALSE;
                     OCR3A = 0x1000;
                     ICR3  = 0xFFFF;
+                    lcd_displayed = FALSE;
+                    temp_mode = FALSE;
+                    radio_display = FALSE;
+                    radio_mode = FALSE;
                     snooze_count = 0;
                     break;
-                //state is for setting clock
+                    //state is for setting clock
                 case (7):
+                    frequency_set_mode = FALSE;
                     temp_mode = FALSE;
+                    radio_display = FALSE;
                     /* store the alarm */
-                    if(five_old == TRUE) {
+                    if(time_old == TRUE) {
                         clock.alarm_hourH   = clock.hoursH;
                         clock.alarm_hourL   = clock.hoursL;
                         clock.alarm_minuteH = clock.minutesH;
@@ -316,14 +417,14 @@ void scan(void) {
                         clock.minutesH      = clock.minutesH_old;
                         clock.minutesL      = clock.minutesL_old;
                         alarm_armed = TRUE;
-                        five_old = FALSE;
+                        time_old = FALSE;
                         dot = TRUE;
                     }
                     /* go to clock set mode */
                     music = FALSE;
                     music_off();
                     clock.mode = 1;
-                    five_old = FALSE;
+                    time_old = FALSE;
                     OCR3A = 0x1000;
                     ICR3  = 0xFFFF;
                     snooze_count = 0;
@@ -334,8 +435,8 @@ void scan(void) {
                     break;
             }
         }
-    
-    DDRA = 0xFF; 
+
+        DDRA = 0xFF; 
     }
 }
 void scan_encoders(void) {
@@ -425,7 +526,7 @@ void scan_encoders(void) {
                     clock.hoursL--;
                 } else {
                     clock.hoursL++;
-                       //account for overflow
+                    //account for overflow
                 }
                 encoder1_shift = TRUE;
             }
@@ -437,7 +538,7 @@ void scan_encoders(void) {
                 } else {
                     clock.minutesL++;
                 }
-            encoder2_shift = TRUE;
+                encoder2_shift = TRUE;
             }
         }
     }
@@ -523,6 +624,18 @@ int segsum(uint16_t count, unsigned int digit_array[]) {
     //now move data to right place for misplaced colon position
 }//segment_sum
 
+void check_radio() {
+    int i = 0;
+    if (fm_freq != current_fm_freq_temp) {
+        fm_freq = fm_freq_temp;
+        fm_tune_freq();
+    }
+    else if(!fm) {
+        fm = 2; //default to the "do nothing" case
+        radio_pwr_dwn();
+    }
+}
+
 //***********************************************************************************
 //
 ISR(TIMER0_COMP_vect) {
@@ -533,7 +646,6 @@ ISR(TIMER0_COMP_vect) {
     static int colon = 0;               // holds if the colon is on or off
     static int colon_mode = 0;          // sets the colon mode: (0: blinking, 1: solid)
     static int snooze_now = 0;          // if the snooze is currenly alarming
-    static int lcd_displayed = FALSE;   // if the LCD is currently displaying
     static int display = 0;             // if the leading 0 should be displayed
     static uint8_t digit = 1;           // holds what digit is being displayed
     static int val1, val2, val3, val4;  // values to be sent to the display
@@ -541,20 +653,25 @@ ISR(TIMER0_COMP_vect) {
     static unsigned char c = NULL;      // if the LCD is displaying alarm data
     static int uart_displayed = FALSE;      // if the LCD is displaying alarm data
     static unsigned char uart_r[16] = {0};      // if the LCextern uint8_t lm73_wr_buf[2];
-	extern uint8_t lm73_rd_buf[2];
-	static uint16_t lm73_temp;
-	static uint16_t celsius;
+    extern uint8_t lm73_rd_buf[2];
+    static uint16_t lm73_temp;
+    static uint16_t celsius;
+
     DDRA = 0x00;                
     PORTA = 0xFF;
     scan();
-    
+
+    sprintf(freq_buf, "%d", current_fm_freq);
     /* prints alarm data to the LCD once */
-    if (alarm_now && !alarm_disp) {
+    /*if (alarm_now && !alarm_disp) {
 
         LCD_Clr();
         LCD_PutStr("ALARM!!");
+        LCD_MovCursorLn2();
+        LCD_PutStr(freq_buf);
+        LCD_MovCursorLn1();
         alarm_disp = TRUE;
-    }
+    }*/
     clock.seconds++;  //ms really            if ((clock.seconds % 1000) == 0) {
     if ((clock.seconds % 1000) == 0) {
 
@@ -567,7 +684,7 @@ ISR(TIMER0_COMP_vect) {
             faren = FALSE;
         }
     }
-        /* clock mode
+    /* clock mode
      * timer counts up by milliseconds for each interrupt
      * checks for equality for the alarm and triggers if equal
      * in snooze mode, times for 10 seconds and triggers alarm at 10s
@@ -576,7 +693,7 @@ ISR(TIMER0_COMP_vect) {
     switch (clock.mode) {
         case(0):
 
-      
+
             if (clock.seconds == 60000) {
                 clock.seconds = 0;
                 clock.minutesL++;
@@ -641,6 +758,7 @@ ISR(TIMER0_COMP_vect) {
                 digit_mode = 1;
                 music = FALSE;
                 music_off();
+
                 OCR3A = 0x1000;
                 ICR3  = 0xFFFF;
                 snooze_now = FALSE;
@@ -667,19 +785,19 @@ ISR(TIMER0_COMP_vect) {
             val2 = clock.hoursL;
             val3 = clock.minutesH;
             val4 = clock.minutesL;
-            
+
             break;
-        /* set clock mode
-         * used for both setting alarm and clock
-         * gets data from the encoders and increments the min/hours accordingly
-         * then it proceeds to handle the overflow/underflow cases:
-               25:00 becomes 00:00,
-               x9:00,
-               00:00 becomes 23:59,
-               and so on
-         */
+            /* set clock mode
+             * used for both setting alarm and clock
+             * gets data from the encoders and increments the min/hours accordingly
+             * then it proceeds to handle the overflow/underflow cases:
+25:00 becomes 00:00,
+x9:00,
+00:00 becomes 23:59,
+and so on
+*/
         case(1):   
-         
+
             colon_mode = 1;
             digit_mode = 1;
             scan_encoders();
@@ -714,10 +832,12 @@ ISR(TIMER0_COMP_vect) {
             val2  = clock.hoursL;
             val3  = clock.minutesH;
             val4  = clock.minutesL;
+
             break;
-        /* simply displays alarm time on the LCD
-         * displays 0:00 if nothing is set
-         */
+
+            /* simply displays alarm time on the LCD
+             * displays 0:00 if nothing is set
+             */
         case(2):
             colon_mode = 1;
             digit_mode = 1;
@@ -725,7 +845,55 @@ ISR(TIMER0_COMP_vect) {
             val2 = clock.alarm_hourL;
             val3 = clock.alarm_minuteH;
             val4 = clock.alarm_minuteL;
+           /* if (!displayed) {
+                LCD_Clr();
+                if (freq_buf[0] != NULL) {
+                    LCD_PutStr("Channel");
+                    LCD_MovCursorLn2();
+                    LCD_PutStr(freq_buf);
+                    LCD_MovCursorLn1();
+                    displayed = TRUE;
+                }
+            }*/
             break;
+
+        case(4) :
+            colon_mode = 2;
+            digit_mode = 1;
+            scan_encoders();
+
+            if (clock.hoursL > 9) {
+                clock.hoursL = 0;
+                clock.hoursH++;
+            } else if (clock.hoursH == 9 && clock.hoursL == 9) {
+                clock.hoursH = 0;
+                clock.hoursL = 0;
+            } else if (clock.hoursH <= 0 && clock.hoursL < 0) {
+                clock.hoursH = 9;
+                clock.hoursL = 9;
+            } else if (clock.hoursL < 0) {
+                clock.hoursH--;
+                clock.hoursL = 9;
+            }
+            if (clock.minutesL > 9) {
+                clock.minutesL = 0;
+                clock.minutesH++;
+            } else if (clock.minutesH == 9 && clock.minutesL == 0) {
+                clock.minutesH = 0;
+                clock.minutesL = 0;
+            } 
+            else if(clock.minutesH == 0 && clock.minutesL < 0) {
+                clock.minutesL = 9; 
+                clock.minutesH = 9;
+            } else if(clock.minutesL < 0) {
+                clock.minutesL = 9;
+                clock.minutesH--;
+            }
+            val1  = clock.hoursH;
+            val2  = clock.hoursL;
+            val3  = clock.minutesH;
+            val4  = clock.minutesL;
+            current_fm_freq = (val1*1000 + val2*100 * val3*10 + val4);
 
         default :
             break;
@@ -740,7 +908,7 @@ ISR(TIMER0_COMP_vect) {
                 colon = TRUE;
             }
             if (clock.seconds % 1000 == 0) {
-               colon = FALSE;
+                colon = FALSE;
             }
             break;
         case(1):
@@ -775,10 +943,10 @@ ISR(TIMER0_COMP_vect) {
             break;
     }
     /* get data from the ADC:
-           start conversion
-           wait until interrupt flag goes (more reliable than ADSC)
-           get data from ADCH
-    */
+       start conversion
+       wait until interrupt flag goes (more reliable than ADSC)
+       get data from ADCH
+       */
     ADCSRA |= (1 << ADSC);
     while (!ADCSRA & (1 << ADIF)) { }
     ADCSRA |=  (1 << ADIF);
@@ -822,6 +990,7 @@ ISR(TIMER0_COMP_vect) {
         PORTB = DIG_TWO; 
         PORTA = get_segment(val3);  
 
+
     }
     else if (digit == 4 && display) {
         PORTB = DIG_ONE;
@@ -838,63 +1007,89 @@ ISR(TIMER0_COMP_vect) {
     uart_flush(); 
     uart_putc('s');
 
+
+
     if (temp_mode) {// && (uart_displayed == FALSE)) {
         if (first_temp) {
             LCD_Clr();
         }
         first_temp = FALSE;
-        LCD_MovCursorLn1(); 
         LCD_PutStr(lcd_local_data);
         LCD_MovCursorLn2(); 
         LCD_PutStr(lcd_remote_data);
+        LCD_MovCursorLn1(); 
     } 
     /* sets the LCD mesage if the alarm is armed */
-    if (!temp_mode && alarm_armed && (lcd_displayed == FALSE)) {
+    if (!temp_mode && alarm_armed && !alarm_disp && (lcd_displayed == FALSE)) {
         LCD_Clr();
         LCD_PutStr("ARMED!!");
+        LCD_MovCursorLn2(); 
+        LCD_PutStr(freq_buf);
+        LCD_MovCursorLn1(); 
         lcd_displayed = TRUE;
+    }
+    if (frequency_set_mode && !alarm_disp &&  (!radio_display)) {
+
+        LCD_Clr();
+        radio_display = TRUE;
+        LCD_PutStr("Setting Frequency");
+        sprintf(freq_buf, "%d", frequency);
+        LCD_MovCursorLn2();
+        LCD_PutStr(freq_buf);
+        LCD_MovCursorLn1();
     }
     /* beat counter for the alarm song 
      * increments the note by one each pass
      */
     if(clock.seconds % 48 == 0) {
-    //for note duration (64th notes) 
+        //for note duration (64th notes) 
         beat++;
     }
 
     //update digit to display
 }
 
+void int7_init(){	//external interrupt enable for GPO2 on radio board, set up for testing. Not using
+        EICRB |= (1 << ISC71) | (1 << ISC70);
+        EIMSK |= (1 << INT7);
+}
+
+/* uart interrupy upon hearing back from the m48
+ * The sensors are read and placed into global buffers to be read out later
+ */
 ISR(USART0_RX_vect){	//USART transmission recieved interrupt
 
 
     uint16_t celsius = UDR0;	//store data from USART recieve
-	uint16_t local_temp;
+    uint16_t local_temp;
     extern uint8_t lm73_wr_buf[2];
-	extern uint8_t lm73_rd_buf[2];
-	uint16_t lm73_temp;
+    extern uint8_t lm73_rd_buf[2];
+    uint16_t lm73_temp;
     LCD_Clr();
     twi_start_rd(LM73_ADDRESS, lm73_rd_buf, 2);  //read the temperature
-	_delay_ms(2);
-	lm73_temp  = lm73_rd_buf[0];    //the high temperature byte
-	lm73_temp  = (lm73_temp << 8);  //push into top byte for return value
-	lm73_temp |= lm73_rd_buf[1];    //temperature bytes are now assembled
-	
+    _delay_ms(2);
+    lm73_temp  = lm73_rd_buf[0];    //the high temperature byte
+    lm73_temp  = (lm73_temp << 8);  //push into top byte for return value
+    lm73_temp |= lm73_rd_buf[1];    //temperature bytes are now assembled
+
     local_temp = lm73_temp/128;
-    char f[1]; 
-	char test[2];
-    	
+
+    char test[2];
+    char radio[4];		
+
+    sprintf(freq_buf, "%d", current_fm_freq);
+
     if (faren) {
         celsius = ((celsius * 9) / 5) + 32;
         local_temp = ((local_temp * 9) / 5) + 32;
     }
     sprintf(test,"%d",local_temp);	
     lcd_local_data[8] = test[0];
-	lcd_local_data[9] = test[1];
-    	
-	sprintf(test,"%d",local_temp);	
+    lcd_local_data[9] = test[1];
+
+    sprintf(test,"%d",celsius);	
     lcd_remote_data[8] = test[0];
-	lcd_remote_data[9] = test[1];
+    lcd_remote_data[9] = test[1];
 
     if (faren) {
         lcd_remote_data[10] = 'F';
@@ -910,11 +1105,11 @@ ISR(USART0_RX_vect){	//USART transmission recieved interrupt
  * goes off every 64th of a second to play a note
  */
 ISR(TIMER1_COMPA_vect) {
-  PORTD ^= ALARM_PIN;      //flips the bit, creating a tone
-  if(beat >= max_beat) {   //if we've played the note long enough
-    notes++;               //move on to the next note
-    play_song(song, notes);//and play it
-  }
+    PORTD ^= ALARM_PIN;      //flips the bit, creating a tone
+    if(beat >= max_beat) {   //if we've played the note long enough
+        notes++;               //move on to the next note
+        play_song(song, notes);//and play it
+    }
 }
 
 
@@ -954,24 +1149,41 @@ void init_spi() {
     SPSR |= (1<<SPI2X); //Enable double SPI speed for master mode
 
 }
-void init_uart() {
-	// Set baud rate
-    unsigned int ubrr = UBRR;
-	UBRR0H = (unsigned char)(ubrr>>8);
-	UBRR0L = (unsigned char)ubrr;
 
-	// Enable receiver, transmitter and receive interrupt
-	UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
+void init_si4734() {
 
-	// Set frame format: 8data, 2stop bit 
-	UCSR0C = (1 << USBS0) | (1 << UCSZ01) | (1 << UCSZ00);
+    //Toggle pins to reset radio board
+    DDRE  |=  (1 << PE2);
+    PORTE &= ~(1 << PE7);
+    DDRE  |=  (1 << PE7);
+    PORTE |=  (1 << PE2);
+    _delay_us(200);
+    PORTE &= ~(1 << PE2);
+    _delay_us(30);
+    DDRE &=  ~(0x80);
+    //default frequency
+    current_fm_freq = 9990;
 }
-void uart_flush(void)
-{
+
+void init_uart() {
+    // Set baud rate
+    unsigned int ubrr = UBRR;
+    UBRR0H = (unsigned char)(ubrr>>8);
+    UBRR0L = (unsigned char)ubrr;
+
+    // Enable receiver, transmitter and receive interrupt
+    UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
+
+    // Set frame format: 8data, 2stop bit 
+    UCSR0C = (1 << USBS0) | (1 << UCSZ01) | (1 << UCSZ00);
+}
+void uart_flush(void){
+
     unsigned char dummy;
     while (UCSR0A & (1<<RXC0)) 
-    dummy = UDR0;
+        dummy = UDR0;
 }
+
 int main() {
 
     DDRB   = 0xF7;
@@ -981,7 +1193,7 @@ int main() {
     DDRF  |= 0x08 | 0x80;
     PORTD  = (1 << PD5) | (1 << PD7);
     CLEAR(DDRA);
-    SET(PORTA); 
+    SET(PORTA);
     init_spi();
     init_clk();
     init_adc();
@@ -991,6 +1203,7 @@ int main() {
     uart_flush();
     //music_on();
     LCD_Init();
+    init_si4734();
     sei();
     while(1){}
     cli();

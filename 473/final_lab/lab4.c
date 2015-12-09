@@ -8,18 +8,12 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <string.h>
-#include <stdio.h>
-#include "lm73_functions_skel.h"
-#include "twi_master.h"
 
 #define DIG_ONE   0x01
 #define DIG_TWO   0x11
 #define DIG_THREE 0x31
 #define DIG_FOUR  0x41
 #define COLON     0x21 
-
-#define BAUD 9600 		
-#define UBRR F_CPU/16/BAUD-1
 
 /* These are the routines for sending data to the LCD
  * the first byte is to put the LCD into command mode, 
@@ -134,8 +128,6 @@ int music = 0;                     // if music is currently being changed
 int snooze_count = 0;              // keeps track of seconds in snooze mode, counts to 10
 int button_pressed = FALSE;        // True for first loop in new state
 
-int temp_mode = FALSE;
-int first_temp = FALSE;
 /* buttons that correspond to bar graph modes */
 uint8_t three     = FALSE;
 uint8_t four      = FALSE;
@@ -144,10 +136,7 @@ uint8_t five_old  = FALSE;
 uint8_t six       = FALSE;
 uint8_t seven     = FALSE;
 
-extern char lcd_local_data[17]  = "Local : ";
-extern char lcd_remote_data[17] = "Remote: ";
-int count_to_five = 0;
-int faren = FALSE;
+
 uint8_t debounce_switch(button) {
 
     static uint16_t state[8] = {0}; //holds present state
@@ -156,34 +145,6 @@ uint8_t debounce_switch(button) {
         return 1;
     }
     return 0;
-}
-unsigned char uart_receive(){
-
-    int timer = 0;
-    /* Wait for data to be received */
-    while (!(UCSR1A & (1<<RXC1))){
-        timer++;
-        if (timer >= 4000) {
-            return 0;
-        }
-    }
-    /* Get and return received data from buffer */
-    return UDR1;
-}
-void uart_putc(unsigned char data){
-    /* Wait for empty transmit buffer */
-    while (!( UCSR1A & (1<<UDRE1)));
-    /* Put data into buffer, sends the data */
-    UDR1 = data;
-}
-
-void uart_puts(unsigned char * data){
-    /* Wait for empty transmit buffer */
-    int i = 0;
-    while (data[i] != NULL) {
-        uart_putc(data[i]);
-        i++;       
-    }
 }
 
 void scan(void) {
@@ -196,14 +157,9 @@ void scan(void) {
         if (debounce_switch(i)) {    
             switch(i) {
                 //snooze
-                case(2):
-                    temp_mode = TRUE;
-                    first_temp = TRUE;
-                    break;
                 case(3):
                     /* display snooze on LCD, adjust volume to off, and set snooze mode */
                     if(alarm_now) {
-                    
                         LCD_Clr();
                         LCD_PutStr("Snoozed");
                         snooze_mode = TRUE;
@@ -216,11 +172,9 @@ void scan(void) {
                         music = FALSE;
 
                     }
-                    temp_mode = FALSE;
                     break;
                 //display alarm
                 case(4):
-                    temp_mode = FALSE;
                     clock.mode = 2;
                     break;
                 //state is for setting alarm
@@ -254,14 +208,10 @@ void scan(void) {
                         clock.mode = 1;
                     }
                     button_pressed = TRUE;
-                    temp_mode = FALSE;
                     break;
                 
                 /* Mode to return to normal */
                 case (6):
-                    if (temp_mode == TRUE) {
-                        temp_mode = FALSE;
-                    }
                     /* first set alarm if we came from alarm mode */
                     if(five_old == TRUE) {
                         clock.alarm_hourH   = clock.hoursH;
@@ -301,10 +251,10 @@ void scan(void) {
                     OCR3A = 0x1000;
                     ICR3  = 0xFFFF;
                     snooze_count = 0;
+                    button_pressed = TRUE;
                     break;
                 //state is for setting clock
                 case (7):
-                    temp_mode = FALSE;
                     /* store the alarm */
                     if(five_old == TRUE) {
                         clock.alarm_hourH   = clock.hoursH;
@@ -538,12 +488,6 @@ ISR(TIMER0_COMP_vect) {
     static uint8_t digit = 1;           // holds what digit is being displayed
     static int val1, val2, val3, val4;  // values to be sent to the display
     static int alarm_disp = FALSE;      // if the LCD is displaying alarm data
-    static unsigned char c = NULL;      // if the LCD is displaying alarm data
-    static int uart_displayed = FALSE;      // if the LCD is displaying alarm data
-    static unsigned char uart_r[16] = {0};      // if the LCextern uint8_t lm73_wr_buf[2];
-	extern uint8_t lm73_rd_buf[2];
-	static uint16_t lm73_temp;
-	static uint16_t celsius;
     DDRA = 0x00;                
     PORTA = 0xFF;
     scan();
@@ -555,19 +499,8 @@ ISR(TIMER0_COMP_vect) {
         LCD_PutStr("ALARM!!");
         alarm_disp = TRUE;
     }
-    clock.seconds++;  //ms really            if ((clock.seconds % 1000) == 0) {
-    if ((clock.seconds % 1000) == 0) {
-
-        if (count_to_five == 5) {
-            faren = TRUE;
-            count_to_five = 0;
-        }
-        else {
-            count_to_five++;
-            faren = FALSE;
-        }
-    }
-        /* clock mode
+    clock.seconds++;  //ms really
+    /* clock mode
      * timer counts up by milliseconds for each interrupt
      * checks for equality for the alarm and triggers if equal
      * in snooze mode, times for 10 seconds and triggers alarm at 10s
@@ -576,7 +509,6 @@ ISR(TIMER0_COMP_vect) {
     switch (clock.mode) {
         case(0):
 
-      
             if (clock.seconds == 60000) {
                 clock.seconds = 0;
                 clock.minutesL++;
@@ -835,21 +767,9 @@ ISR(TIMER0_COMP_vect) {
         PORTA = 0x04;
     }
     digit++; 
-    uart_flush(); 
-    uart_putc('s');
 
-    if (temp_mode) {// && (uart_displayed == FALSE)) {
-        if (first_temp) {
-            LCD_Clr();
-        }
-        first_temp = FALSE;
-        LCD_MovCursorLn1(); 
-        LCD_PutStr(lcd_local_data);
-        LCD_MovCursorLn2(); 
-        LCD_PutStr(lcd_remote_data);
-    } 
     /* sets the LCD mesage if the alarm is armed */
-    if (!temp_mode && alarm_armed && (lcd_displayed == FALSE)) {
+    if (alarm_armed && (lcd_displayed == FALSE)) {
         LCD_Clr();
         LCD_PutStr("ARMED!!");
         lcd_displayed = TRUE;
@@ -864,48 +784,6 @@ ISR(TIMER0_COMP_vect) {
 
     //update digit to display
 }
-
-ISR(USART0_RX_vect){	//USART transmission recieved interrupt
-
-
-    uint16_t celsius = UDR0;	//store data from USART recieve
-	uint16_t local_temp;
-    extern uint8_t lm73_wr_buf[2];
-	extern uint8_t lm73_rd_buf[2];
-	uint16_t lm73_temp;
-    LCD_Clr();
-    twi_start_rd(LM73_ADDRESS, lm73_rd_buf, 2);  //read the temperature
-	_delay_ms(2);
-	lm73_temp  = lm73_rd_buf[0];    //the high temperature byte
-	lm73_temp  = (lm73_temp << 8);  //push into top byte for return value
-	lm73_temp |= lm73_rd_buf[1];    //temperature bytes are now assembled
-	
-    local_temp = lm73_temp/128;
-    char f[1]; 
-	char test[2];
-    	
-    if (faren) {
-        celsius = ((celsius * 9) / 5) + 32;
-        local_temp = ((local_temp * 9) / 5) + 32;
-    }
-    sprintf(test,"%d",local_temp);	
-    lcd_local_data[8] = test[0];
-	lcd_local_data[9] = test[1];
-    	
-	sprintf(test,"%d",local_temp);	
-    lcd_remote_data[8] = test[0];
-	lcd_remote_data[9] = test[1];
-
-    if (faren) {
-        lcd_remote_data[10] = 'F';
-        lcd_local_data[10] = 'F';
-    } else {
-        lcd_remote_data[10] = 'C';
-        lcd_local_data[10] = 'C';
-    }
-    uart_flush();
-}
-
 /* timer1 routine to generate the song tones
  * goes off every 64th of a second to play a note
  */
@@ -936,7 +814,6 @@ void init_clk() {
     TCCR3B |= (1 << WGM33) | (1 << CS30) | (1 << WGM32);
     OCR3A   = 0x3000; //volume range
     ICR3    = 0x4000;
-
 }
 /* initialize to 125 kHz (datasheet), using VCC for reference,
  * 8 bit resolution, and then do the first conversion (init) 
@@ -954,25 +831,8 @@ void init_spi() {
     SPSR |= (1<<SPI2X); //Enable double SPI speed for master mode
 
 }
-void init_uart() {
-	// Set baud rate
-    unsigned int ubrr = UBRR;
-	UBRR0H = (unsigned char)(ubrr>>8);
-	UBRR0L = (unsigned char)ubrr;
 
-	// Enable receiver, transmitter and receive interrupt
-	UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
-
-	// Set frame format: 8data, 2stop bit 
-	UCSR0C = (1 << USBS0) | (1 << UCSZ01) | (1 << UCSZ00);
-}
-void uart_flush(void)
-{
-    unsigned char dummy;
-    while (UCSR0A & (1<<RXC0)) 
-    dummy = UDR0;
-}
-int main() {
+uint8_t main() {
 
     DDRB   = 0xF7;
     DDRE  |= (1 << PE3);
@@ -985,10 +845,7 @@ int main() {
     init_spi();
     init_clk();
     init_adc();
-    init_twi();
     music_init();
-    init_uart();
-    uart_flush();
     //music_on();
     LCD_Init();
     sei();

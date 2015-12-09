@@ -8,7 +8,7 @@
 
 #define F_CPU 8000000UL		//8Mhz clock
 #define FOSC 8000000		// Clock Speed
-#define BAUD 9600
+#define BAUD 5000
 #define SETUBRR FOSC/16/BAUD-1  //Calculate UBRR value in UART
 
 char    lcd_string_array[16];  //holds a string to refresh the LCD
