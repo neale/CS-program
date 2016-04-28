@@ -11,25 +11,36 @@
 #include <avr/io.h>
 #include <stdlib.h>
 #include <util/twi.h>
+#include <avr/eeprom.h>
 #include <util/delay.h>
+#include "../uart_functions.h"
 
-#include "twi_master.h" //my defines for TWCR_START, STOP, RACK, RNACK, SEND
+#include "../twi_master.h" //my defines for TWCR_START, STOP, RACK, RNACK, SEND
 #include "si4734.h"
 
 uint8_t si4734_wr_buf[9];          //buffer for holding data to send to the si4734 
 uint8_t si4734_rd_buf[15];         //buffer for holding data recieved from the si4734
 uint8_t si4734_tune_status_buf[8]; //buffer for holding tune_status data  
+//uint8_t si4734_revision_buf[16];   //buffer for holding revision  data  
 
-enum radio_band{FM, AM, SW};
-extern volatile enum radio_band current_radio_band;
+//enum radio_band{FM, AM, SW};
+//extern volatile enum radio_band current_radio_band;
 
 volatile uint8_t STC_interrupt;  //flag bit to indicate tune or seek is done
 
-extern volatile uint16_t current_fm_freq;
+//extern uint16_t eeprom_fm_freq;
+//extern uint16_t eeprom_am_freq;
+//extern uint16_t eeprom_sw_freq;
+//extern uint8_t  eeprom_volume;
+
+extern uint16_t current_fm_freq;
 extern uint16_t current_am_freq;
 extern uint16_t current_sw_freq;
-extern uint8_t  current_volume;
-uint8_t si4734_revision_buf[16];
+//extern uint8_t  current_volume;
+
+//Used in debug mode for UART1
+//extern char uart1_tx_buf[40];      //holds string to send to crt
+//extern char uart1_rx_buf[40];      //holds string that recieves data from uart
 //******************************************************************
 
 
@@ -67,7 +78,8 @@ void fm_tune_freq(){
   //send fm tune command
   STC_interrupt = FALSE;
   twi_start_wr(SI4734_ADDRESS, si4734_wr_buf, 5);
-  while( ! STC_interrupt ){}; //spin until the tune command finishes 
+  //while( ! STC_interrupt ){}; //spin until the tune command finishes 
+  _delay_us(300);
 }
 //********************************************************************************
 
@@ -87,7 +99,7 @@ void am_tune_freq(){
   //send am tune command
   STC_interrupt = FALSE;
   twi_start_wr(SI4734_ADDRESS, si4734_wr_buf, 6);
-  while( ! STC_interrupt ){}; //spin until the tune command finishes 
+  //while( ! STC_interrupt ){}; //spin until the tune command finishes 
 }
 //********************************************************************************
 
@@ -106,7 +118,7 @@ void sw_tune_freq(){
   si4734_wr_buf[5] = 0x01;  //antenna tuning capactior low byte 
   //send am tune command
   twi_start_wr(SI4734_ADDRESS, si4734_wr_buf, 6);
-   _delay_ms(80); //TODO: FIX
+ // while( ! STC_interrupt ){}; //spin until the tune command finishes 
 }
 
 //********************************************************************************
@@ -114,6 +126,8 @@ void sw_tune_freq(){
 //
 void fm_pwr_up(){
 //restore the previous fm frequency  
+// current_fm_freq = eeprom_read_word(&eeprom_fm_freq); //TODO: only this one does not work 
+// current_volume  = eeprom_read_byte(&eeprom_volume); //TODO: only this one does not work 
 
 //send fm power up command
   si4734_wr_buf[0] = FM_PWR_UP; //powerup command byte
@@ -132,6 +146,8 @@ void fm_pwr_up(){
 //
 void am_pwr_up(){
 //restore the previous am frequency  
+//  current_am_freq = eeprom_read_word(&eeprom_am_freq);
+//  current_volume  = eeprom_read_byte(&eeprom_volume); //TODO: only this one does not work 
 
 //send am power up command
   si4734_wr_buf[0] = AM_PWR_UP;
@@ -149,6 +165,8 @@ void am_pwr_up(){
 
 void sw_pwr_up(){
 //restore the previous sw frequency  
+//  current_sw_freq = eeprom_read_word(&eeprom_sw_freq);
+//  current_volume  = eeprom_read_byte(&eeprom_volume); //TODO: only this one does not work 
 
 //send sw power up command (same as am, only tuning rate is different)
     si4734_wr_buf[0] = AM_PWR_UP; //same cmd as for AM
@@ -170,12 +188,17 @@ void sw_pwr_up(){
 //
 
 void radio_pwr_dwn(){
-
+/*
 //save current frequency to EEPROM
 switch(current_radio_band){
+  case(FM) : eeprom_write_word(&eeprom_fm_freq, current_fm_freq); break;
+  case(AM) : eeprom_write_word(&eeprom_am_freq, current_am_freq); break;
+  case(SW) : eeprom_write_word(&eeprom_sw_freq, current_sw_freq); break;
+  default  : break;
 }//switch      
 
-
+  eeprom_write_byte(&eeprom_volume, current_volume); //save current volume level
+*/
 //send fm power down command
     si4734_wr_buf[0] = 0x11;
     twi_start_wr(SI4734_ADDRESS, si4734_wr_buf, 1);
@@ -277,7 +300,7 @@ void set_property(uint16_t property, uint16_t property_value){
     twi_start_wr(SI4734_ADDRESS, si4734_wr_buf, 6);
     _delay_ms(10);  //SET_PROPERTY command takes 10ms to complete
 }//set_property()
-
+/*
 //********************************************************************************
 //                            get_rev()
 //
@@ -294,6 +317,10 @@ void get_rev(){
     twi_start_rd(SI4734_ADDRESS, si4734_revision_buf, 8);
     while( twi_busy() ){}; //spin till TWI read transaction finshes
 //use TABs instead?
+    uart1_puts("Si4734 Rev:  last 2 digits of part no.   chip rev     \n\r");
+    uart1_puts("             -------------------------   --------     \n\r");
+    uart1_puts("                          "); itoa((int)si4734_revision_buf[1], uart1_tx_buf, 10); uart1_puts(uart1_tx_buf); 
+    uart1_puts("             "); itoa((int)si4734_revision_buf[2], uart1_tx_buf, 10); uart1_puts(uart1_tx_buf); uart1_puts("\n\r");
 }
 
 //********************************************************************************
@@ -308,7 +335,14 @@ void get_fm_rsq_status(){
   uint8_t disp_freq;  //temp holding variable
   char    str[40];    //temp for building strings
 
+  uart1_puts("FM_RSQ_STATUS: ");
+  uart1_puts("status byte   :");   itoa((int)si4734_tune_status_buf[0], uart1_tx_buf, 16);   uart1_puts(uart1_tx_buf); uart1_puts("\n\r");
+  uart1_puts("resp1         :");   itoa((int)si4734_tune_status_buf[1], uart1_tx_buf, 10);   uart1_puts(uart1_tx_buf); uart1_puts("\n\r");
   disp_freq = si4734_tune_status_buf[2];      //load high frequency byte
   disp_freq = (disp_freq << 8); //shift upper byte to upper 8 bits
   disp_freq |= si4734_tune_status_buf[3];     //load low high frequency byte
-}
+  uart1_puts("freq          :");   itoa(disp_freq, uart1_tx_buf, 10);   uart1_puts(uart1_tx_buf); uart1_puts("\n\r");
+  uart1_puts("freq high     :");   itoa((int)si4734_tune_status_buf[2], str, 16);   uart1_puts(str); uart1_puts("\n\r");
+  uart1_puts("freq low      :");   itoa((int)si4734_tune_status_buf[3], str, 16);   uart1_puts(str); uart1_puts("\n\r");
+  uart1_puts("rssi          :");   itoa((int)si4734_tune_status_buf[4], uart1_tx_buf, 16);   uart1_puts(uart1_tx_buf); uart1_puts("\n\r");
+} */

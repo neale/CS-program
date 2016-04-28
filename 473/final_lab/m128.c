@@ -20,8 +20,10 @@
 #define COLON     0x21 
 
 #define BAUD 9600 		
-#define UBRR F_CPU/16/BAUD-1
-
+#define UBRR_LVL F_CPU/16/BAUD-1
+unsigned char uart_lvl[5];
+int flag = FALSE;
+int radio_flag = FALSE;
 /* These are the routines for sending data to the LCD
  * the first byte is to put the LCD into command mode, 
  * and the second byte is to store data into SRAM
@@ -102,6 +104,7 @@ Clock clock = {0};
  * http://web.engr.oregonstate.edu/~traylor/ece473/example_code/kellen_music.c
  * It took my own work to integrate the timing into my system
  */
+int disp = FALSE;
 int displayed = FALSE;
 int display_mode = FALSE;
 int fm_prev = 0;
@@ -114,16 +117,20 @@ int lcd_displayed = FALSE;
 int radio_display = FALSE;
 //char lcd_radio[7];
 int volume_final = 0;
+
+
 int current_fm_freq_temp = 9990;
 enum radio_band{FM, AM, SW};
 volatile enum radio_band current_radio_band;
 volatile uint16_t radio_presets[8] = {8870, 9990, 10630, 9130, 9190, 9230, 9350, 9470};
 uint16_t eeprom_fm_freq;
 
-uint8_t STC_interrupt;     //indicates tune or seek is done
+
+extern volatile uint8_t STC_interrupt;     //indicates tune or seek is done
 extern uint8_t  si4734_tune_status_buf[8];
 int frequency = 0;
 char freq_buf[5];
+
 int frequency_set_mode = FALSE;
 extern volatile uint8_t  twi_state; 
 uint16_t eeprom_am_freq;
@@ -173,6 +180,7 @@ int button_pressed = FALSE;        // True for first loop in new state
 
 int temp_mode = FALSE;
 int first_temp = FALSE;
+
 /* buttons that correspond to bar graph modes */
 uint8_t three     = FALSE;
 uint8_t four      = FALSE;
@@ -183,8 +191,32 @@ uint8_t seven     = FALSE;
 
 extern char lcd_local_data[17]  = "Local : ";
 extern char lcd_remote_data[17] = "Remote: ";
+
 int count_to_five = 0;
 int faren = FALSE;
+static uint8_t seed = 0x00;
+static uint8_t Magic = 0x5c;
+
+
+static uint8_t RotateRight(uint8_t val, int nr) {
+    uint8_t tmp;
+    while(nr--) {
+        tmp = val & 1;
+        tmp >>= 1;
+        val |= tmp;
+    }
+    return val;
+}
+uint8_t rand() {
+    seed = RotateRight(seed, 3);
+    seed += Magic;
+
+    return seed;
+}
+void Srand(uint8_t val) {
+    seed = val;
+}
+
 uint8_t debounce_switch(button) {
 
     static uint16_t state[8] = {0}; //holds present state
@@ -198,20 +230,20 @@ unsigned char uart_receive(){
 
     int timer = 0;
     /* Wait for data to be received */
-    while (!(UCSR1A & (1<<RXC1))){
+    while (!(UCSR0A & (1<<RXC0))){
         timer++;
         if (timer >= 4000) {
             return 0;
         }
     }
     /* Get and return received data from buffer */
-    return UDR1;
+    return UDR0;
 }
 void uart_putc(unsigned char data){
     /* Wait for empty transmit buffer */
-    while (!( UCSR1A & (1<<UDRE1)));
+    while (!( UCSR0A & (1<<UDRE0)));
     /* Put data into buffer, sends the data */
-    UDR1 = data;
+    UDR0 = data;
 }
 
 void uart_puts(unsigned char * data){
@@ -230,11 +262,16 @@ void scan(void) {
     int i = 0;
     /* use dec7 to tristate the LEDs */
     /* keep SS high */
+    
     PORTB |= 0x71; 
     for (i = 0; i < 8; i++) {
         if (debounce_switch(i)) {    
             switch(i) {
                 //snooze
+                case(0):
+                    radio_flag = TRUE;
+                    
+                    break;
                 case(1):
                     radio_mode = TRUE;
                     temp_mode = FALSE;
@@ -254,8 +291,15 @@ void scan(void) {
                         if (!was_freq) {
                             alarm_armed = TRUE;
                             dot = TRUE;       
-                        }   
-                        clock.mode = 0;
+                        } 
+                    clock.alarm_hourH   = 0;
+                    clock.alarm_hourL   = 0;
+                    clock.alarm_minuteH = 0;
+                    clock.alarm_minuteL = 0;
+                    alarm_armed = FALSE;
+                    button_pressed = TRUE;
+  
+                    clock.mode = 0;
                     }
                     else {
                         /* otherwise enter alarm mode and store clock time */
@@ -308,7 +352,8 @@ void scan(void) {
                     //display alarm and freq
                 case(4):
                     frequency_set_mode = FALSE;
-                    display_mode = FALSE;
+                    radio_display = FALSE;
+                    display_mode = TRUE;
                     temp_mode = FALSE;
                     clock.mode = 2;
                     displayed = FALSE;
@@ -544,6 +589,22 @@ void scan_encoders(void) {
     }
     button_pressed = FALSE;    
 }
+uint16_t get_temp128() {
+
+    uint16_t lm73_temp;
+    uint16_t temp128;
+
+    extern uint8_t lm73_wr_buf[2];
+    extern uint8_t lm73_rd_buf[2];
+    twi_start_rd(LM73_ADDRESS, lm73_rd_buf, 2);  //read the temperature
+    lm73_temp  = lm73_rd_buf[0] << 8;    //the high temperature byte
+    lm73_temp |= lm73_rd_buf[1];    //temperature bytes are now assembled
+    temp128 = lm73_temp/128;
+
+    return temp128;
+}
+
+
 uint8_t get_segment(uint8_t bcd) {
 
     switch (bcd) {
@@ -656,7 +717,7 @@ ISR(TIMER0_COMP_vect) {
     extern uint8_t lm73_rd_buf[2];
     static uint16_t lm73_temp;
     static uint16_t celsius;
-
+    static int chan;
     DDRA = 0x00;                
     PORTA = 0xFF;
     scan();
@@ -665,13 +726,13 @@ ISR(TIMER0_COMP_vect) {
     /* prints alarm data to the LCD once */
     /*if (alarm_now && !alarm_disp) {
 
-        LCD_Clr();
-        LCD_PutStr("ALARM!!");
-        LCD_MovCursorLn2();
-        LCD_PutStr(freq_buf);
-        LCD_MovCursorLn1();
-        alarm_disp = TRUE;
-    }*/
+      LCD_Clr();
+      LCD_PutStr("ALARM!!");
+      LCD_MovCursorLn2();
+      LCD_PutStr(freq_buf);
+      LCD_MovCursorLn1();
+      alarm_disp = TRUE;
+      }*/
     clock.seconds++;  //ms really            if ((clock.seconds % 1000) == 0) {
     if ((clock.seconds % 1000) == 0) {
 
@@ -845,24 +906,35 @@ and so on
             val2 = clock.alarm_hourL;
             val3 = clock.alarm_minuteH;
             val4 = clock.alarm_minuteL;
-           /* if (!displayed) {
-                LCD_Clr();
-                if (freq_buf[0] != NULL) {
-                    LCD_PutStr("Channel");
-                    LCD_MovCursorLn2();
-                    LCD_PutStr(freq_buf);
-                    LCD_MovCursorLn1();
-                    displayed = TRUE;
-                }
-            }*/
+            /* if (!displayed) {
+               LCD_Clr();
+               if (freq_buf[0] != NULL) {
+               LCD_PutStr("Channel");
+               LCD_MovCursorLn2();
+               LCD_PutStr(freq_buf);
+               LCD_MovCursorLn1();
+               displayed = TRUE;
+               }
+               }*/
             break;
 
         case(4) :
             colon_mode = 2;
             digit_mode = 1;
             scan_encoders();
-
-            if (clock.hoursL > 9) {
+            chan = clock.minutesL;
+            if (chan > 8) {
+                chan = 0;
+            }
+            else if (chan < 0) {
+                chan = 8;
+            }
+            val1 = radio_presets[chan]/1000 % 10;
+            val2 = radio_presets[chan]/100 % 10;
+            val3 = radio_presets[chan]/10 % 10;
+            val4 = radio_presets[chan] % 10;
+             
+ /*           if (clock.hoursL > 9) {
                 clock.hoursL = 0;
                 clock.hoursH++;
             } else if (clock.hoursH == 9 && clock.hoursL == 9) {
@@ -893,8 +965,9 @@ and so on
             val2  = clock.hoursL;
             val3  = clock.minutesH;
             val4  = clock.minutesL;
-            current_fm_freq = (val1*1000 + val2*100 * val3*10 + val4);
-
+  */          
+           current_fm_freq = (val1*1000 + val2*100 * val3*10 + val4);
+            
         default :
             break;
     }
@@ -1004,21 +1077,54 @@ and so on
         PORTA = 0x04;
     }
     digit++; 
-    uart_flush(); 
-    uart_putc('s');
 
-
-
-    if (temp_mode) {// && (uart_displayed == FALSE)) {
-        if (first_temp) {
-            LCD_Clr();
+    static uint16_t temp48 = 0;	//store data from USART recieve
+    static uint16_t temp128 = 0;
+    static char test[2];
+    static char radio[4];		
+    if (display_mode && !disp) {
+        LCD_Clr();
+        LCD_PutStr(strcat("Channel: ", freq_buf));
+        if (alarm_armed) {
+            LCD_MovCursorLn2();
+            LCD_PutStr("ARMED!!");
+            LCD_MovCursorLn1();
         }
-        first_temp = FALSE;
-        LCD_PutStr(lcd_local_data);
-        LCD_MovCursorLn2(); 
-        LCD_PutStr(lcd_remote_data);
-        LCD_MovCursorLn1(); 
-    } 
+        disp = TRUE;
+    }
+    if (temp_mode) {// && (uart_displayed == FALSE)) {
+
+
+        if ((clock.seconds % 500) == 0) {
+            uart_putc('a');
+            _delay_ms(2);
+            if (!flag) {        
+                
+                temp128 = get_temp128();
+      
+                if (faren) {
+                    temp48 = ((temp48 * 9) / 5) + 32;
+                    temp128 = ((temp128 * 9) / 5) + 32;
+                }
+                sprintf(test,"%d",temp128);	
+                lcd_local_data[8] = test[0];
+                lcd_local_data[9] = test[1];
+                if (faren) {
+                    lcd_local_data[10] = 'F';
+                } else {
+                    lcd_local_data[10] = 'C';
+                }
+            }
+
+            LCD_Clr();
+            //           LCD_PutStr(uart_lvl);
+            LCD_PutStr(lcd_local_data);
+            LCD_MovCursorLn2(); 
+            LCD_PutStr(lcd_remote_data);
+            LCD_MovCursorLn1(); 
+        }
+    }
+    flag = FALSE; 
     /* sets the LCD mesage if the alarm is armed */
     if (!temp_mode && alarm_armed && !alarm_disp && (lcd_displayed == FALSE)) {
         LCD_Clr();
@@ -1047,50 +1153,37 @@ and so on
     }
 
     //update digit to display
-}
+    }
 
 void int7_init(){	//external interrupt enable for GPO2 on radio board, set up for testing. Not using
         EICRB |= (1 << ISC71) | (1 << ISC70);
         EIMSK |= (1 << INT7);
-}
+    }
 
-/* uart interrupy upon hearing back from the m48
- * The sensors are read and placed into global buffers to be read out later
- */
 ISR(USART0_RX_vect){	//USART transmission recieved interrupt
-
-
-    uint16_t celsius = UDR0;	//store data from USART recieve
-    uint16_t local_temp;
-    extern uint8_t lm73_wr_buf[2];
-    extern uint8_t lm73_rd_buf[2];
-    uint16_t lm73_temp;
-    LCD_Clr();
-    twi_start_rd(LM73_ADDRESS, lm73_rd_buf, 2);  //read the temperature
-    _delay_ms(2);
-    lm73_temp  = lm73_rd_buf[0];    //the high temperature byte
-    lm73_temp  = (lm73_temp << 8);  //push into top byte for return value
-    lm73_temp |= lm73_rd_buf[1];    //temperature bytes are now assembled
-
-    local_temp = lm73_temp/128;
-
+  
+    uint16_t temp48 = 0;	//store data from USART recieve
+    uint16_t temp128 = 0;
     char test[2];
     char radio[4];		
-
+    char itoanum[2];
+    flag = TRUE;
+    temp48 = UDR0;
+    _delay_ms(2);
+    temp128 = get_temp128();
     sprintf(freq_buf, "%d", current_fm_freq);
 
     if (faren) {
-        celsius = ((celsius * 9) / 5) + 32;
-        local_temp = ((local_temp * 9) / 5) + 32;
+        temp48 = ((temp48 * 9) / 5) + 32;
+        temp128 = ((temp128 * 9) / 5) + 32;
     }
-    sprintf(test,"%d",local_temp);	
-    lcd_local_data[8] = test[0];
-    lcd_local_data[9] = test[1];
-
-    sprintf(test,"%d",celsius);	
+    sprintf(test,"%d",temp48);	
     lcd_remote_data[8] = test[0];
     lcd_remote_data[9] = test[1];
 
+    sprintf(test,"%d",temp128);	
+    lcd_local_data[8] = test[0];
+    lcd_local_data[9] = test[1];
     if (faren) {
         lcd_remote_data[10] = 'F';
         lcd_local_data[10] = 'F';
@@ -1098,7 +1191,7 @@ ISR(USART0_RX_vect){	//USART transmission recieved interrupt
         lcd_remote_data[10] = 'C';
         lcd_local_data[10] = 'C';
     }
-    uart_flush();
+
 }
 
 /* timer1 routine to generate the song tones
@@ -1111,7 +1204,7 @@ ISR(TIMER1_COMPA_vect) {
         play_song(song, notes);//and play it
     }
 }
-
+ISR(INT7_vect){STC_interrupt = TRUE;}
 
 //Initialize Timer/Counter 0
 void init_clk() {
@@ -1149,7 +1242,6 @@ void init_spi() {
     SPSR |= (1<<SPI2X); //Enable double SPI speed for master mode
 
 }
-
 void init_si4734() {
 
     //Toggle pins to reset radio board
@@ -1167,7 +1259,7 @@ void init_si4734() {
 
 void init_uart() {
     // Set baud rate
-    unsigned int ubrr = UBRR;
+    unsigned int ubrr = UBRR_LVL;
     UBRR0H = (unsigned char)(ubrr>>8);
     UBRR0L = (unsigned char)ubrr;
 
@@ -1194,18 +1286,24 @@ int main() {
     PORTD  = (1 << PD5) | (1 << PD7);
     CLEAR(DDRA);
     SET(PORTA);
+    init_uart();
     init_spi();
     init_clk();
     init_adc();
-    init_twi();
     music_init();
-    init_uart();
-    uart_flush();
+    init_si4734();
     //music_on();
     LCD_Init();
-    init_si4734();
+    init_twi();
+    _delay_ms(2);
+//    fm_pwr_up();
     sei();
-    while(1){}
+    while(1){
+//        if (radio_flag) {
+//            LCD_PutStr("TUNING");
+//            fm_tune_freq();
+//        }
+    }
     cli();
     return 0;
 
