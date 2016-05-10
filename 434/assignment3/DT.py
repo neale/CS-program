@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import operator
 import sys
 import intertools, functools
-
+import collections
 def load_data():
 
     with open('./train.csv', 'rb') as f:
@@ -57,44 +57,30 @@ class DT(object):
             else:
                 np.append(i, 0)
 
-    def decision_tree(self, attributes, target_attr, fitness_func):
+    def decision_tree(self, attributes, target, fitness):
         """
         Returns a new decision tree based on the examples given.
         """
-        data = data[:]
-        vals    = [record[target_attr] for record in data]
-        default = majority_value(data, target_attr)
+        vals    = [record[target] for record in self.train]
+        for ex in self.train:
+            label.append(ex[-1])
+        default = majority_value(data, target)
 
-        # If the dataset is empty or the attributes list is empty, return the
-        # default value. When checking the attributes list for emptiness, we
-        # need to subtract 1 to account for the target attribute.
+        counter = collections.Counter(train[:,-1])
+        defaullt = counter.most_common(1)[0][0]
+
         if not data or (len(attributes) - 1) <= 0:
             return default
-        # If all the records in the dataset have the same classification,
-        # return that classification.
         elif vals.count(vals[0]) == len(vals):
             return vals[0]
         else:
-            # Choose the next best attribute to best classify our data
-            best = choose_attribute(data, attributes, target_attr,
-                                    fitness_func)
-
-            # Create a new decision tree/node with the best attribute and an empty
-            # dictionary object--we'll fill that up next.
+            best = choose_attribute(data, attributes, target, gain)
             tree = {best:{}}
 
-            # Create a new decision tree/sub-node for each of the values in the
-            # best attribute field
-            for val in get_values(data, best):
+            for val in get_values(self.train, best):
                 # Create a subtree for the current value under the "best" field
-                subtree = create_decision_tree(
-                    get_examples(data, best, val),
-                    [attr for attr in attributes if attr != best],
-                    target_attr,
-                    fitness_func)
+                self.subtree = decision_tree(attributes, target, fitness)
 
-                # Add the new subtree to the empty dictionary object in our new
-                # tree/node we just created.
                 tree[best][val] = subtree
 
         return tree

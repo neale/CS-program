@@ -24,9 +24,11 @@ def load_data():
         test =  np.array(test)
         test_labels = test[:,0]
         test_data = test[:,1:]
-    # images are represented in each row of pixels
+
     return train_data, test_data, test_labels
 
+# runs cross validation, using 5 folds. 
+# compute accuracy and computes seperate model from main routine
 def k_fold_cross_validation(train, test, test_labels, params):
     foldsize = int(len(train)/5) # K
     averages = []
@@ -45,6 +47,9 @@ def k_fold_cross_validation(train, test, test_labels, params):
         averages.append((average_score, k))
     return sorted(averages, key=operator.itemgetter(0), reverse=True)[0]
 
+# leave one out cross validation make a full pass on all the training data
+# save for one example, and validates on that one example after the pass, 
+# this is repeated for all the training examples. 
 def leave_one_out_cross_validation(train, test, params):
     averages = []
     for K in params['K']:
@@ -61,6 +66,7 @@ def leave_one_out_cross_validation(train, test, params):
         averages.append((average_score, K))
     return sorted(averages, key=operator.itemgetter(0), reverse=True)[0]
 
+# does a full pass of the training data and tests on the test dataset
 def testK(train, test, test_labels, params):
     for K in params['K']:
         val = np.array(test)
@@ -93,6 +99,7 @@ class KNN(object):
         self.Kclass = []
         self.acc = 0
 
+    # computes the neighbors (distances), and classifies them
     def fit(self):
         if hasattr(self.val[0], '__len__'):
             for i in xrange(len(self.val)):
@@ -102,6 +109,8 @@ class KNN(object):
             self.nearest_neighbors(self.val, len(self.val))
             self.predict()
 
+    # computes the K nearest original distances to each point in the data
+    # and stores them as a tuple of (point, distances)
     def nearest_neighbors(self, test, l):
         distances = []
         for i in xrange(len(self.train)):
@@ -113,6 +122,7 @@ class KNN(object):
         for i in xrange(self.K):
             self.neighbors.append(distances[i][0])
 
+    # classifies the points, by taking the nearest neighbor to the point
     def predict(self):
 
         nearest_class = {}
@@ -125,7 +135,8 @@ class KNN(object):
         res = sorted(nearest_class.iteritems(), key=operator.itemgetter(1), reverse = True)[0][0]
         self.Kclass.append(res)
 
-
+    # computes the accuracy by comparing against the label column
+    # predictions correct / total examples * 100 = accuracy
     def score(self):
         correct = 0.
         if hasattr(self.val_labels, '__len__'):
