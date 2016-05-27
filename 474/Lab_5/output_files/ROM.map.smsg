@@ -1,0 +1,1 @@
+Warning (10268): Verilog HDL information at debounce.sv(29): always construct contains both blocking and non-blocking assignments File: /home/enratzz/altera_lite/15.1/Lab_5/debounce.sv Line: 29

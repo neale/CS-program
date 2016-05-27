@@ -1,0 +1,22 @@
+|seven_seg
+buttons[0] => Decoder0.IN7
+buttons[1] => Decoder0.IN6
+buttons[2] => Decoder0.IN5
+buttons[3] => Decoder0.IN4
+buttons[4] => Decoder0.IN3
+buttons[5] => Decoder0.IN2
+buttons[6] => Decoder0.IN1
+buttons[7] => Decoder0.IN0
+select[0] << WideOr4.DB_MAX_OUTPUT_PORT_TYPE
+select[1] << WideOr2.DB_MAX_OUTPUT_PORT_TYPE
+select[2] << WideOr0.DB_MAX_OUTPUT_PORT_TYPE
+segments[0] << digit.00000100.DB_MAX_OUTPUT_PORT_TYPE
+segments[1] << WideOr7.DB_MAX_OUTPUT_PORT_TYPE
+segments[2] << segments.DB_MAX_OUTPUT_PORT_TYPE
+segments[3] << segments.DB_MAX_OUTPUT_PORT_TYPE
+segments[4] << WideOr6.DB_MAX_OUTPUT_PORT_TYPE
+segments[5] << WideOr5.DB_MAX_OUTPUT_PORT_TYPE
+segments[6] << segments.DB_MAX_OUTPUT_PORT_TYPE
+en_n << <GND>
+
+
