@@ -95,9 +95,8 @@ set_location_assignment PIN_C9 -to rr[4]
 set_location_assignment PIN_B12 -to rr[5]
 set_location_assignment PIN_D11 -to rr[6]
 set_location_assignment PIN_B11 -to rr[7]
-set_global_assignment -name SYSTEMVERILOG_FILE sine_rom.sv
-set_global_assignment -name SYSTEMVERILOG_FILE debounce.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ROM.sv
-set_global_assignment -name QIP_FILE sine.qip
-set_global_assignment -name QIP_FILE phase.qip
+set_global_assignment -name SYSTEMVERILOG_FILE debounce.sv
+set_global_assignment -name QIP_FILE ADC.qip
+set_global_assignment -name QIP_FILE sclk.qip
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

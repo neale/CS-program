@@ -5,18 +5,23 @@ module ROM(
 	input         		encoder1,
 	input         		clk,
 	input  wire   		reset,
+	input logic       d_out,
+	output logic      d_in,
+	output 				_sclk,
 	output [6:0]  		segments,
+	output            dp,
 	output [2:0]  		select,
 	output 		  		display_clk, //5000Hz
-	output        		phase_clk, //16.77MHz
-	output unsigned 	[7:0]  rr,
 	output        		pwm
 	
 
 );
-integer multiplier = 1;
-logic [23:0] phase_acc;
-logic [10:0] rom_data;
+// ADC vars
+logic cs_n = 1;
+logic [11:0] adc_rom_out;
+logic [11:0] d_out_buffer;
+logic [3:0]  count_posedge;
+logic [3:0]  count_negedge;
 logic encoder_a;
 logic encoder_b;
 logic button0;
@@ -29,15 +34,16 @@ frame_rate frame_rate0(
   .locked ( lock_display )
 );
 
-sine ROM0(
-  .address ( rom_data ),
-  .clock   ( clk ),
-  .q       ( rr )
+ADC ADC0 (
+	.address ( d_out_buffer ),
+	.clock ( _sclk ),
+	.q ( adc_rom_out )
 );
 
-phase phase_clk0(
-  .inclk0 (clk),
-  .c0     (phase_clk)
+
+sclk	sclk_0 (
+	.inclk0 ( clk ),
+	.c0 ( _sclk )
 );
 
 // debounce both of the encoder inputs
@@ -55,6 +61,52 @@ debounce encoderb(
 	.triggered (encoder_b)
 );
 
+// The adc is free running (may change) at a 2MHZ clk. It has an operating sclk range of 0.8 to 3.2 MHz
+// There is a 16 bit data loop that is captured one bit at a time, at the falling edge of sclk
+// CS is lowered on the first falling edge, and din is provided one bit at a time at the negedge of sclk
+// sclk is raised on the last rising edge of a frame
+always @(negedge _sclk)
+	begin
+   casez(count_negedge)
+		
+			0 : cs_n = 0;
+			2 : d_in = 0;
+			3 : d_in = 0;
+			4 : d_in = 0;
+			default : d_in = 0;
+	endcase
+	count_negedge++;	
+	end
+	
+always @(posedge _sclk)
+	begin
+		casez(count_posedge)
+			
+			4 : d_out_buffer[11] = d_out;
+			5 : d_out_buffer[10] = d_out;
+			6 : d_out_buffer[9] = d_out;
+			7 : d_out_buffer[8] = d_out;
+			8 : d_out_buffer[7] = d_out;
+			9 : d_out_buffer[6] = d_out;
+			10 : d_out_buffer[5] = d_out;
+			11 : d_out_buffer[4] = d_out;
+			12 : d_out_buffer[3] = d_out;
+			13 : d_out_buffer[2] = d_out;
+			14 : d_out_buffer[1] = d_out;
+			15 : 
+				begin
+					cs_n = 1;
+					d_out_buffer[0] = d_out;
+				end
+			default : d_out_buffer = 0;
+		endcase
+		count_posedge++;	
+			
+	end
+
+// ***************************************************************************//
+//										 Routine Logic
+// **************************************************************************//
 logic [3:0]   digit  = 0;  // initial digit to display
 
 // seven seg decoder
@@ -71,11 +123,10 @@ always_comb
 			7 : segments = 7'b1111000; 
 			8 : segments = 7'b0000000; 
 			9 : segments = 7'b0010000; 
-			0 : segments = 7'b1000000; 
-						 
+			0 : segments = 7'b1000000; 	
+			10 : segments = 7'b1111111;
 		endcase
 	end
-
 
 // quad encoder logic, Roger';s flip flop idea found on FPGAs are fun
 // Takes the known last states of the encoders and debounces them
@@ -106,9 +157,9 @@ always  @(posedge clk)
 		if (encoder_turning)
 			begin
 				if(encoder_dir) 
-					cnt<=cnt+(1*multiplier); 
+					cnt<=cnt+1; 
 				else 
-					cnt<=cnt-(1*multiplier);
+					cnt<=cnt-1;
 				if (cnt > 9999)
 					cnt <= cnt - 9999;
 			end
@@ -131,20 +182,10 @@ always_ff @ (posedge display_clk)
 		endcase
 	end
 	
-
-always @(posedge phase_clk) 
-	begin
-	  // increment by 16 instead of 1
-	phase_acc += cnt;
-	rom_data = phase_acc[23:13];
-	
-end	
-	
 //state machine for cycling through digits
 logic [3:0] ones = 0;
-logic [3:0] tens = 0;
-logic [3:0] hundreds = 0;
-logic [3:0] thousands = 0;
+logic [3:0] tenth = 0;
+logic [3:0] hundredth = 0;
 integer  i;
 // block takes the current countand creates the digit to push out the decoder
 // to do this, we're going to take the 10 bit count value and do some math
@@ -152,92 +193,54 @@ integer  i;
 //BCD algorithm: double dabble
 //or shift and add 3 algorithm
 
-always @ (cnt)
+always @ (adc_rom_out)
 	begin
-		  thousands = 4'd0;
-        hundreds = 4'd0;
-        tens = 4'd0;
+        hundredth = 4'd0;
+        tenth = 4'd0;
         ones = 4'd0;
-		for  (i = 13; i >= 0; i = i-1)
+		for  (i = 11; i >= 0; i = i-1)
 			begin
 			  // if the value contained is over 5, add three
 			  // so that the shift guarantees the carryover to the next "number"
-=          if (thousands >= 5)
-               thousands = thousands + 3;
-			 	else
-					thousands = thousands;
-          if (hundreds >= 5)
-               hundreds = hundreds + 3;
+          if (hundredth >= 5)
+               hundredth = hundredth + 3;
 			 else
-				   hundreds = hundreds;
-          if (tens >= 5)
-               tens = tens + 3;
+				   hundredth = hundredth;
+          if (tenth >= 5)
+               tenth = tenth + 3;
 			 else
-					tens = tens;
+					tenth = tenth;
           if (ones >= 5)
 				ones = ones + 3;
 			 else
 				ones = ones;
 			 
-          thousands = thousands << 1;
-          thousands[0] = hundreds[3];
-          hundreds = hundreds << 1;
-          hundreds[0] = tens[3];
-          tens = tens << 1;
-          tens[0] = ones[3];
+
+          hundredth = hundredth << 1;
+          hundredth[0] = tenth[3];
+          tenth = tenth << 1;
+          tenth[0] = ones[3];
           ones = ones << 1;
-          ones[0] = cnt[i];
+          ones[0] = adc_rom_out[i];
 				
 			end
 	end
 	
-//extra credit use buttons for count modifiers. 
-logic [1:0] buttons_ab;
 always_comb
 	begin
-	buttons_ab = {button0, button1};
-	case (~buttons)
-		2'b??????00 : multiplier = 1;
-		2'b??????01 : multiplier = 10;
-	   2'b??????10 : multiplier = 100;
-		2'b??????11 : multiplier = 1000;
-		default : multiplier = 1;
-	endcase
-end
-
+		casez (select)
+			3'b011 : dp = 0;
+			default: dp = 1;
+		endcase
+	end
+	
 always_comb
-	begin		
-	unique casez(select_state)
-		3'b111  :
-			begin
-				if (thousands > 0)
-					select = 3'b100;
-				else
-					select = 3'b111;
-			end
-		3'b001  : 
-			begin
-				if (hundreds > 0 || thousands > 0) 
-					select = 3'b011; 
-				else
-					select = 3'b111; //off
-			end
-		3'b010  : 
-			begin
-				if (tens > 0 || hundreds > 0 || thousands > 0)
-					select = 3'b001; 
-				else 
-					select = 3'b111; //off
-			end
-				
-		3'b100  : select = 3'b000; 
-	endcase
-		
+	begin
 	unique casez(select)
-		3'b100 : digit = thousands; 
-		3'b011 : digit = hundreds;			
-		3'b001 : digit = tens;
-		3'b000 : digit = ones;
+		3'b100 : digit = ones; 
+		3'b011 : digit = 10;	//always DP on		
+		3'b001 : digit = tenth;
+		3'b000 : digit = hundredth;
 	endcase
 	
 	end
