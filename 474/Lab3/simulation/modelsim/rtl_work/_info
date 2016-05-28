@@ -1,0 +1,34 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/home/enratzz/altera_lite/15.1/Lab3/simulation/modelsim
+vseven_seg
+DXx6 sv_std 3 std 0 22 WmjPaeP=7F5?QFXzJ>D[Q2
+!s110 1461356198
+!i10b 1
+!s100 a6<XB827F:20QAB@_Xo310
+Ia:IJ9<RK;HL4Ook_S4D:51
+VDg1SIo80bB@j0V0VzS_@n1
+!s105 seven_seg_sv_unit
+S1
+R0
+w1461356087
+8/home/enratzz/altera_lite/15.1/Lab3/seven_seg.sv
+F/home/enratzz/altera_lite/15.1/Lab3/seven_seg.sv
+L0 2
+OV;L;10.4b;61
+r1
+!s85 0
+31
+!s108 1461356198.000000
+!s107 /home/enratzz/altera_lite/15.1/Lab3/seven_seg.sv|
+!s90 -reportprogress|300|-sv|-work|work|+incdir+/home/enratzz/altera_lite/15.1/Lab3|/home/enratzz/altera_lite/15.1/Lab3/seven_seg.sv|
+!i113 1
+o-sv -work work
+!s92 -sv -work work +incdir+/home/enratzz/altera_lite/15.1/Lab3
