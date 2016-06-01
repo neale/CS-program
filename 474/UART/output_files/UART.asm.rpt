@@ -1,5 +1,5 @@
 Assembler report for UART
-Tue May 31 23:37:06 2016
+Wed Jun  1 09:20:22 2016
 Quartus Prime Version 15.1.0 Build 185 10/21/2015 SJ Lite Edition
 
 
@@ -38,7 +38,7 @@ agreement for further details.
 +---------------------------------------------------------------+
 ; Assembler Summary                                             ;
 +-----------------------+---------------------------------------+
-; Assembler Status      ; Successful - Tue May 31 23:37:06 2016 ;
+; Assembler Status      ; Successful - Wed Jun  1 09:20:22 2016 ;
 ; Revision Name         ; UART                                  ;
 ; Top-level Entity Name ; UART                                  ;
 ; Family                ; Cyclone IV E                          ;
@@ -68,8 +68,8 @@ agreement for further details.
 ; Option         ; Setting           ;
 +----------------+-------------------+
 ; Device         ; EP4CE22F17C6      ;
-; JTAG usercode  ; 0x002045B8        ;
-; Checksum       ; 0x002045B8        ;
+; JTAG usercode  ; 0x002063B2        ;
+; Checksum       ; 0x002063B2        ;
 +----------------+-------------------+
 
 
@@ -79,13 +79,13 @@ agreement for further details.
 Info: *******************************************************************
 Info: Running Quartus Prime Assembler
     Info: Version 15.1.0 Build 185 10/21/2015 SJ Lite Edition
-    Info: Processing started: Tue May 31 23:37:05 2016
+    Info: Processing started: Wed Jun  1 09:20:21 2016
 Info: Command: quartus_asm --read_settings_files=off --write_settings_files=off UART -c UART
 Info (115031): Writing out detailed assembly data for power analysis
 Info (115030): Assembler is generating device programming files
 Info: Quartus Prime Assembler was successful. 0 errors, 0 warnings
-    Info: Peak virtual memory: 1012 megabytes
-    Info: Processing ended: Tue May 31 23:37:06 2016
+    Info: Peak virtual memory: 1009 megabytes
+    Info: Processing ended: Wed Jun  1 09:20:22 2016
     Info: Elapsed time: 00:00:01
     Info: Total CPU time (on all processors): 00:00:01
 

@@ -5,21 +5,3 @@ select_state.001 0 0 0 0
 select_state.010 0 0 1 1 
 select_state.100 0 1 0 1 
 select_state.111 1 0 0 1 
-
-State Machine - |UART|adc_state
-Name adc_state.CARRAIGE adc_state.NEWLINE adc_state.DECIMAL adc_state.THOUSANDS adc_state.HUNDREDS adc_state.TENS adc_state.ONES 
-adc_state.ONES 0 0 0 0 0 0 0 
-adc_state.TENS 0 0 0 0 0 1 1 
-adc_state.HUNDREDS 0 0 0 0 1 0 1 
-adc_state.THOUSANDS 0 0 0 1 0 0 1 
-adc_state.DECIMAL 0 0 1 0 0 0 1 
-adc_state.NEWLINE 0 1 0 0 0 0 1 
-adc_state.CARRAIGE 1 0 0 0 0 0 1 
-
-State Machine - |UART|tx_state
-Name tx_state.TX_IDLE tx_state.TX_DATA tx_state.TX_STOP tx_state.TX_START tx_state.TX_INIT 
-tx_state.TX_START 0 0 0 0 0 
-tx_state.TX_STOP 0 0 1 1 0 
-tx_state.TX_DATA 0 1 0 1 0 
-tx_state.TX_IDLE 1 0 0 1 0 
-tx_state.TX_INIT 0 0 0 1 1 

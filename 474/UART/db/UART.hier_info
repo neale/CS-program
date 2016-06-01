@@ -1,5 +1,5 @@
 |UART
-clk => clk.IN4
+clk => clk.IN3
 reset => ~NO_FANOUT~
 d_out => d_out_buffer[0].DATAIN
 d_out => d_out_buffer[1].DATAIN
@@ -13,24 +13,24 @@ d_out => d_out_buffer[8].DATAIN
 d_out => d_out_buffer[9].DATAIN
 d_out => d_out_buffer[10].DATAIN
 d_out => d_out_buffer[11].DATAIN
-d_in << d_in~reg0.DB_MAX_OUTPUT_PORT_TYPE
-cs_n << cs_n~reg0.DB_MAX_OUTPUT_PORT_TYPE
-sclk << ADC_PLL:sclk_0.c0
-segments[0] << WideOr16.DB_MAX_OUTPUT_PORT_TYPE
-segments[1] << WideOr14.DB_MAX_OUTPUT_PORT_TYPE
-segments[2] << Decoder2.DB_MAX_OUTPUT_PORT_TYPE
-segments[3] << WideOr12.DB_MAX_OUTPUT_PORT_TYPE
-segments[4] << WideOr10.DB_MAX_OUTPUT_PORT_TYPE
-segments[5] << WideOr8.DB_MAX_OUTPUT_PORT_TYPE
-segments[6] << WideOr6.DB_MAX_OUTPUT_PORT_TYPE
-dp << Equal2.DB_MAX_OUTPUT_PORT_TYPE
-select[0] << select.DB_MAX_OUTPUT_PORT_TYPE
-select[1] << select[1].DB_MAX_OUTPUT_PORT_TYPE
-select[2] << select[2].DB_MAX_OUTPUT_PORT_TYPE
-display_clk << Display_PLL:display0.c0
-pwm << <GND>
-tx_clk << <GND>
-tx_send << tx_send~reg0.DB_MAX_OUTPUT_PORT_TYPE
+d_in <= d_in~reg0.DB_MAX_OUTPUT_PORT_TYPE
+cs_n <= cs_n~reg0.DB_MAX_OUTPUT_PORT_TYPE
+sclk <= ADC_PLL:sclk_0.c0
+segments[0] <= WideOr12.DB_MAX_OUTPUT_PORT_TYPE
+segments[1] <= WideOr10.DB_MAX_OUTPUT_PORT_TYPE
+segments[2] <= Decoder2.DB_MAX_OUTPUT_PORT_TYPE
+segments[3] <= WideOr8.DB_MAX_OUTPUT_PORT_TYPE
+segments[4] <= WideOr6.DB_MAX_OUTPUT_PORT_TYPE
+segments[5] <= WideOr4.DB_MAX_OUTPUT_PORT_TYPE
+segments[6] <= WideOr2.DB_MAX_OUTPUT_PORT_TYPE
+dp <= Equal2.DB_MAX_OUTPUT_PORT_TYPE
+select[0] <= select.DB_MAX_OUTPUT_PORT_TYPE
+select[1] <= select[1].DB_MAX_OUTPUT_PORT_TYPE
+select[2] <= select[2].DB_MAX_OUTPUT_PORT_TYPE
+display_clk <= Display_PLL:display0.c0
+pwm <= <GND>
+tx_clk <= <GND>
+tx_send <= Mux4.DB_MAX_OUTPUT_PORT_TYPE
 
 
 |UART|Display_PLL:display0

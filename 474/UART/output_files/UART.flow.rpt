@@ -1,5 +1,5 @@
 Flow report for UART
-Tue May 31 23:37:06 2016
+Wed Jun  1 09:20:34 2016
 Quartus Prime Version 15.1.0 Build 185 10/21/2015 SJ Lite Edition
 
 
@@ -41,14 +41,14 @@ agreement for further details.
 +----------------------------------------------------------------------------------+
 ; Flow Summary                                                                     ;
 +------------------------------------+---------------------------------------------+
-; Flow Status                        ; Successful - Tue May 31 23:37:06 2016       ;
+; Flow Status                        ; Successful - Wed Jun  1 09:20:34 2016       ;
 ; Quartus Prime Version              ; 15.1.0 Build 185 10/21/2015 SJ Lite Edition ;
 ; Revision Name                      ; UART                                        ;
 ; Top-level Entity Name              ; UART                                        ;
 ; Family                             ; Cyclone IV E                                ;
 ; Device                             ; EP4CE22F17C6                                ;
 ; Timing Models                      ; Final                                       ;
-; Total logic elements               ; 168 / 22,320 ( < 1 % )                      ;
+; Total logic elements               ; 169 / 22,320 ( < 1 % )                      ;
 ;     Total combinational functions  ; 156 / 22,320 ( < 1 % )                      ;
 ;     Dedicated logic registers      ; 46 / 22,320 ( < 1 % )                       ;
 ; Total registers                    ; 46                                          ;
@@ -65,7 +65,7 @@ agreement for further details.
 +-------------------+---------------------+
 ; Option            ; Setting             ;
 +-------------------+---------------------+
-; Start date & time ; 05/31/2016 23:36:33 ;
+; Start date & time ; 06/01/2016 09:19:51 ;
 ; Main task         ; Compilation         ;
 ; Revision Name     ; UART                ;
 +-------------------+---------------------+
@@ -76,11 +76,22 @@ agreement for further details.
 +-------------------------------------+---------------------------------------+---------------+-------------+----------------+
 ; Assignment Name                     ; Value                                 ; Default Value ; Entity Name ; Section Id     ;
 +-------------------------------------+---------------------------------------+---------------+-------------+----------------+
-; COMPILER_SIGNATURE_ID               ; 0.146476299313894                     ; --            ; --          ; --             ;
+; COMPILER_SIGNATURE_ID               ; 0.146479799139776                     ; --            ; --          ; --             ;
 ; EDA_OUTPUT_DATA_FORMAT              ; Vhdl                                  ; --            ; --          ; eda_simulation ;
 ; EDA_SIMULATION_TOOL                 ; ModelSim-Altera (VHDL)                ; <None>        ; --          ; --             ;
 ; MAX_CORE_JUNCTION_TEMP              ; 85                                    ; --            ; --          ; --             ;
 ; MIN_CORE_JUNCTION_TEMP              ; 0                                     ; --            ; --          ; --             ;
+; MISC_FILE                           ; TX_PLL_inst.v                         ; --            ; --          ; --             ;
+; MISC_FILE                           ; TX_PLL_bb.v                           ; --            ; --          ; --             ;
+; MISC_FILE                           ; TX_PLL.ppf                            ; --            ; --          ; --             ;
+; MISC_FILE                           ; Conversion_ROM_inst.v                 ; --            ; --          ; --             ;
+; MISC_FILE                           ; Conversion_ROM_bb.v                   ; --            ; --          ; --             ;
+; MISC_FILE                           ; Display_PLL_inst.v                    ; --            ; --          ; --             ;
+; MISC_FILE                           ; Display_PLL_bb.v                      ; --            ; --          ; --             ;
+; MISC_FILE                           ; Display_PLL.ppf                       ; --            ; --          ; --             ;
+; MISC_FILE                           ; ADC_PLL_inst.v                        ; --            ; --          ; --             ;
+; MISC_FILE                           ; ADC_PLL_bb.v                          ; --            ; --          ; --             ;
+; MISC_FILE                           ; ADC_PLL.ppf                           ; --            ; --          ; --             ;
 ; PARTITION_COLOR                     ; 16764057                              ; --            ; --          ; Top            ;
 ; PARTITION_FITTER_PRESERVATION_LEVEL ; PLACEMENT_AND_ROUTING                 ; --            ; --          ; Top            ;
 ; PARTITION_NETLIST_TYPE              ; SOURCE                                ; --            ; --          ; Top            ;
@@ -90,27 +101,31 @@ agreement for further details.
 +-------------------------------------+---------------------------------------+---------------+-------------+----------------+
 
 
-+--------------------------------------------------------------------------------------------------------------------------+
-; Flow Elapsed Time                                                                                                        ;
-+----------------------+--------------+-------------------------+---------------------+------------------------------------+
-; Module Name          ; Elapsed Time ; Average Processors Used ; Peak Virtual Memory ; Total CPU Time (on all processors) ;
-+----------------------+--------------+-------------------------+---------------------+------------------------------------+
-; Analysis & Synthesis ; 00:00:17     ; 1.0                     ; 1179 MB             ; 00:00:26                           ;
-; Fitter               ; 00:00:06     ; 1.0                     ; 1329 MB             ; 00:00:06                           ;
-; Assembler            ; 00:00:01     ; 1.0                     ; 1012 MB             ; 00:00:01                           ;
-; Total                ; 00:00:24     ; --                      ; --                  ; 00:00:33                           ;
-+----------------------+--------------+-------------------------+---------------------+------------------------------------+
++-------------------------------------------------------------------------------------------------------------------------------+
+; Flow Elapsed Time                                                                                                             ;
++---------------------------+--------------+-------------------------+---------------------+------------------------------------+
+; Module Name               ; Elapsed Time ; Average Processors Used ; Peak Virtual Memory ; Total CPU Time (on all processors) ;
++---------------------------+--------------+-------------------------+---------------------+------------------------------------+
+; Analysis & Synthesis      ; 00:00:16     ; 1.0                     ; 1181 MB             ; 00:00:25                           ;
+; Fitter                    ; 00:00:05     ; 1.0                     ; 1329 MB             ; 00:00:05                           ;
+; Assembler                 ; 00:00:01     ; 1.0                     ; 1009 MB             ; 00:00:01                           ;
+; TimeQuest Timing Analyzer ; 00:00:01     ; 1.0                     ; 1049 MB             ; 00:00:01                           ;
+; EDA Netlist Writer        ; 00:00:01     ; 1.0                     ; 1263 MB             ; 00:00:01                           ;
+; Total                     ; 00:00:24     ; --                      ; --                  ; 00:00:33                           ;
++---------------------------+--------------+-------------------------+---------------------+------------------------------------+
 
 
-+--------------------------------------------------------------------------------------+
-; Flow OS Summary                                                                      ;
-+----------------------+------------------+--------------+------------+----------------+
-; Module Name          ; Machine Hostname ; OS Name      ; OS Version ; Processor type ;
-+----------------------+------------------+--------------+------------+----------------+
-; Analysis & Synthesis ; ubuntu           ; Ubuntu 16.04 ; 16         ; x86_64         ;
-; Fitter               ; ubuntu           ; Ubuntu 16.04 ; 16         ; x86_64         ;
-; Assembler            ; ubuntu           ; Ubuntu 16.04 ; 16         ; x86_64         ;
-+----------------------+------------------+--------------+------------+----------------+
++-------------------------------------------------------------------------------------------+
+; Flow OS Summary                                                                           ;
++---------------------------+------------------+--------------+------------+----------------+
+; Module Name               ; Machine Hostname ; OS Name      ; OS Version ; Processor type ;
++---------------------------+------------------+--------------+------------+----------------+
+; Analysis & Synthesis      ; ubuntu           ; Ubuntu 16.04 ; 16         ; x86_64         ;
+; Fitter                    ; ubuntu           ; Ubuntu 16.04 ; 16         ; x86_64         ;
+; Assembler                 ; ubuntu           ; Ubuntu 16.04 ; 16         ; x86_64         ;
+; TimeQuest Timing Analyzer ; ubuntu           ; Ubuntu 16.04 ; 16         ; x86_64         ;
+; EDA Netlist Writer        ; ubuntu           ; Ubuntu 16.04 ; 16         ; x86_64         ;
++---------------------------+------------------+--------------+------------+----------------+
 
 
 ------------
@@ -119,6 +134,8 @@ agreement for further details.
 quartus_map --read_settings_files=on --write_settings_files=off UART -c UART
 quartus_fit --read_settings_files=off --write_settings_files=off UART -c UART
 quartus_asm --read_settings_files=off --write_settings_files=off UART -c UART
+quartus_sta UART -c UART
+quartus_eda --read_settings_files=off --write_settings_files=off UART -c UART
 
 
 

@@ -20,9 +20,9 @@ module UART(
 // UART vars
 localparam TX_START=0, TX_STOP=1, TX_DATA=2, TX_IDLE=3, TX_INIT=4;
 logic [2:0] tx_state = TX_INIT;
-logic tx_ready = 0;
-logic [3:0] tx_sent = 0;
-
+logic tx_ready = 1;
+logic [7:0] baud_count = 0;
+// adc_bcd_state machine
 localparam ONES=0, TENS=1, HUNDREDS=2, THOUSANDS=3, DECIMAL=4, NEWLINE=5, CARRAIGE=6;
 logic [2:0] adc_state = THOUSANDS;
 logic [7:0] tx_data = 0;
@@ -102,94 +102,140 @@ always @(posedge sclk)
 
   end
   
-  
+reg [3:0] state;
+logic TxD_start = 1;
+logic [7:0] TxD_data = 200;
+// the state machine starts when "TxD_start" is asserted, but advances when "BaudTick" is asserted (115200 times a second)
+always @(posedge tx_clk)
+case(state)
+  4'b0000: if(TxD_start) state <= 4'b0100;
+  4'b0100: if(baud_count == 192) state <= 4'b1000; // start
+  4'b1000: if(baud_count == 192) state <= 4'b1001; // bit 0
+  4'b1001: if(baud_count == 192) state <= 4'b1010; // bit 1
+  4'b1010: if(baud_count == 192) state <= 4'b1011; // bit 2
+  4'b1011: if(baud_count == 192) state <= 4'b1100; // bit 3
+  4'b1100: if(baud_count == 192) state <= 4'b1101; // bit 4
+  4'b1101: if(baud_count == 192) state <= 4'b1110; // bit 5
+  4'b1110: if(baud_count == 192) state <= 4'b1111; // bit 6
+  4'b1111: if(baud_count == 192) state <= 4'b0001; // bit 7
+  4'b0001: if(baud_count == 192) state <= 4'b0010; // stop1
+  4'b0010: if(baud_count == 192) state <= 4'b0000; // stop2
+  default: if(baud_count == 192) state <= 4'b0000;
+endcase
+reg muxbit;
+
+always @(state[2:0])
+case(state[2:0])
+  0: tx_send <= TxD_data[0];
+  1: tx_send <= TxD_data[1];
+  2: tx_send <= TxD_data[2];
+  3: tx_send <= TxD_data[3];
+  4: tx_send <= TxD_data[4];
+  5: tx_send <= TxD_data[5];
+  6: tx_send <= TxD_data[6];
+  7: tx_send <= TxD_data[7];
+endcase
+
 always @(posedge tx_clk)
 	begin
-		case(tx_state)
-		
-			TX_INIT: begin
-				tx_send <= 1;
-				tx_data_count <= 0;
-				tx_state <= TX_IDLE;				end
-				
-			TX_IDLE: begin
-				tx_send <= 1;
-				if (tx_ready || ~tx_complete) begin
-					unique casez(adc_state)
-						ONES: begin
-							tx_data <= ones+48;
-							adc_state <= NEWLINE;
-							tx_state <= TX_START;
-							end
-						TENS: begin
-							tx_data <= tens+48;
-							adc_state <= ONES;
-							tx_state <= TX_START;
-							end
-						HUNDREDS: begin
-							tx_data <= hundreds+48;
-							adc_state <= TENS;
-							tx_state <= TX_START;
-							end
-						THOUSANDS: begin
-							tx_data <= thousands+48;
-							adc_state <= DECIMAL;
-							tx_state <= TX_START;
-							end
-						DECIMAL: begin
-							tx_data <= 46;
-							adc_state <= HUNDREDS;
-							tx_state <= TX_START;
-							end
-						NEWLINE: begin
-							tx_data <= 10;
-							adc_state <= CARRAIGE;
-							tx_state <= TX_START;
-							end
-						CARRAIGE: begin
-							tx_data <= 13;
-							adc_state <= THOUSANDS;
-							tx_complete = 1;
-							tx_state <= TX_START;
-							end
-					endcase
+	if (baud_count == 192) baud_count = 0;
+	else baud_count++;
+	end
+/*
+always @(posedge tx_clk)
+	begin
+		if (baud_count == 192)
+			begin
+			baud_count <= 0;
+			case(tx_state)
+			
+				TX_INIT: begin
+					tx_send <= 1;
+					tx_data_count <= 0;
+					tx_state <= TX_IDLE;				
+					end
+					
+				TX_IDLE: begin
+					tx_send <= 1;
+					if (tx_ready || ~tx_complete) begin
+						unique casez(adc_state)
+							ONES: begin
+								tx_data <= 5;//ones+48;
+								adc_state <= NEWLINE;
+								tx_state <= TX_START;
+								end
+							TENS: begin
+								tx_data <= 5;//tens+48;
+								adc_state <= ONES;
+								tx_state <= TX_START;
+								end
+							HUNDREDS: begin
+								tx_data <= 5;//hundreds+48;
+								adc_state <= TENS;
+								tx_state <= TX_START;
+								end
+							THOUSANDS: begin
+								tx_complete <= 0;
+								tx_data <= 5;//thousands+48;
+								adc_state <= DECIMAL;
+								tx_state <= TX_START;
+								end
+							DECIMAL: begin
+								tx_data <= 5;//46;
+								adc_state <= HUNDREDS;
+								tx_state <= TX_START;
+								end
+							NEWLINE: begin
+								tx_data <= 5;//10;
+								adc_state <= THOUSANDS;
+								tx_state <= TX_START;
+								end
+							CARRAIGE: begin
+								tx_data <= 5;//13;
+								adc_state <= NEWLINE;
+								tx_complete = 1;
+								tx_state <= TX_START;
+								end
+						endcase
+					end
+					else
+						tx_state <= TX_IDLE;
 				end
-				else
-					tx_state <= TX_IDLE;
-			end
-			TX_START: begin
-				tx_send <= 0;
-				tx_sent <= 0;
-				tx_state <= TX_DATA;
-				end
-
-			TX_DATA: begin
-				tx_send <= tx_data[0];
-				tx_data <= {1'b1, tx_data[7:1]};
-				if (tx_data_count == 7) begin
-					tx_data_count = 0;
-					tx_state <= TX_STOP;
-				end
-				else begin
-					tx_data_count <= tx_data_count + 1;
+				TX_START: begin
+					tx_send <= 0;
 					tx_state <= TX_DATA;
-				end
-				end
+					end
 
-			TX_STOP: begin
-				tx_send <= 1;
-				tx_state <= TX_IDLE;
+				TX_DATA: begin
+					tx_send <= tx_data[0];
+					tx_data <= {1'b0, tx_data[7:1]};
+					if (tx_data_count == 7) begin
+						tx_data_count = 0;
+						tx_state <= TX_STOP;
+					end
+					else begin
+						tx_data_count <= tx_data_count + 1;
+						tx_state <= TX_DATA;
+					end
+					end
+
+				TX_STOP: begin
+					tx_send <= 1;
+					tx_state <= TX_IDLE;
+					end
+					
+				default: begin
+					tx_send <= 0;
+					tx_data_count <= 0;
+					tx_state <= TX_IDLE;
 				end
-				
-			default: begin
-				tx_send <= 0;
-				tx_data_count <= 0;
-				tx_state <= TX_IDLE;
+			endcase
 			end
-		endcase
+		else
+			baud_count <= baud_count + 1;
 	end
 	
-
+*/
 // ***************************************************************************//
 //                                Routine Logic
 // **************************************************************************//
@@ -254,6 +300,9 @@ integer  i;
 //BCD algorithm: double dabble
 //or shift and add 3 algorithm
 
+
+// combine start, data, and stop bits together
+assign TxD = (state<4) | (state[3] & muxbit);
 always @(adc_data)
 	begin
 
@@ -289,10 +338,10 @@ always @(adc_data)
 			tens[0] = ones[3];
 			ones = ones << 1;
 			ones[0] = adc_rom_out[i];
-			if (i == 0)
-				tx_ready = 1;
-			else
-				tx_ready = 0;		
+			//if (i == 0)
+			//	tx_ready = 1;
+			//else
+			//	tx_ready = 0;		
 	  end
 	 end
 
