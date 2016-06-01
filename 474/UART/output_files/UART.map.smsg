@@ -1,0 +1,7 @@
+Warning (10268): Verilog HDL information at UART.sv(81): always construct contains both blocking and non-blocking assignments File: /home/enratz/repos/CS-Program/474/UART/UART.sv Line: 81
+Warning (10268): Verilog HDL information at UART.sv(106): always construct contains both blocking and non-blocking assignments File: /home/enratz/repos/CS-Program/474/UART/UART.sv Line: 106
+Info (10281): Verilog HDL Declaration information at UART.sv(21): object "TX_DATA" differs only in case from object "tx_data" in the same scope File: /home/enratz/repos/CS-Program/474/UART/UART.sv Line: 21
+Info (10281): Verilog HDL Declaration information at UART.sv(26): object "ONES" differs only in case from object "ones" in the same scope File: /home/enratz/repos/CS-Program/474/UART/UART.sv Line: 26
+Info (10281): Verilog HDL Declaration information at UART.sv(26): object "TENS" differs only in case from object "tens" in the same scope File: /home/enratz/repos/CS-Program/474/UART/UART.sv Line: 26
+Info (10281): Verilog HDL Declaration information at UART.sv(26): object "HUNDREDS" differs only in case from object "hundreds" in the same scope File: /home/enratz/repos/CS-Program/474/UART/UART.sv Line: 26
+Info (10281): Verilog HDL Declaration information at UART.sv(26): object "THOUSANDS" differs only in case from object "thousands" in the same scope File: /home/enratz/repos/CS-Program/474/UART/UART.sv Line: 26
