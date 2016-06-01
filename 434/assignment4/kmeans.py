@@ -5,7 +5,7 @@ import operator
 
 def load_data():
 
-    with open('./data.csv', 'rb') as f:
+    with open('./kdata.csv', 'rb') as f:
         train = f.readlines()
         train = [line.strip('\n') for line in train]
         for i, line in enumerate(train):
@@ -33,6 +33,7 @@ class K_Means(object):
         self.centers = []
         self.old_clusters = []
         self.update_count = 0
+        self.SSE = []
         self.initialize()
 
     def initialize(self):
@@ -47,14 +48,19 @@ class K_Means(object):
             self.update_centers()
         return self.X, self.centers
 
+    ''' gets the distance of each point to each center then takes the min distance as its assigned center'''
     def assign_clusters(self):
+        sse_sum = 0
         for i, dims in enumerate(self.X):
             d_center = []
             for center in self.centers:
                 d_center.append((euclidian_distance(dims, center),center))
             d_center.sort(key=operator.itemgetter(0))
             dims[2] = d_center[0][1]
+            sse_sum += d_center[0][0]
+        self.SSE.append(sse_sum)
 
+    ''' computes the new center of each cluster based on the SSE'''
     def update_centers(self):
         self.update_count += 1
         print "Update {}".format(self.update_count)
@@ -67,16 +73,53 @@ class K_Means(object):
             new_center = np.mean(np.array(update_queue),axis=0)
             self.old_clusters[i] = center
             self.centers[i] = new_center
-        print "updated centers to {}\n\n".format(self.centers)
 
     def converged(self):
         return set([tuple(x) for x in self.centers]) == set([tuple(x) for x in self.old_clusters])
 
+    ''' plotting functions to display SSE '''
+    def plot(self):
+        datamap = []
+        def color():
+            return (np.random.rand(3,1))
+        f = plt.figure()
+        ax = f.add_subplot(1, 1, 1)
+        for i, center in enumerate(self.centers):
+            hold = []
+            for point in self.X:
+                if point[-1][0] == center[0]:
+                    hold.append(point[:-1])
+            datamap.append(hold)
+        for cluster in datamap:
+            ax.scatter([x[0] for x in cluster], [y[1] for y in cluster], c=color())
+        f = plt.figure()
+        bx = f.add_subplot(1, 1, 1)
+        bx.plot(range(0, len(self.SSE)), self.SSE, c=color())
+        bx.set_title('SSE for K = {}'.format(self.K))
+        bx.set_xlabel('iteration')
+        bx.set_ylabel('SSE')
+
+        plt.show()
+
 if __name__ == '__main__':
 
     X = load_data()
-    KMC = K_Means(X, 9)
-    clf, centers = KMC.fit()
-    print "\n--------------------------------------------------------------------\n"
-    print "final centers", centers
+    k_vals = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+    sse = []
+    k_sse = []
+    for K in k_vals:
+        print "K = ", K
+        for _ in range(10): 
+            try:
+                KMC = K_Means(X, K)
+                clf, centers = KMC.fit()
+                print "\n--------------------------------------------------------------------\n"
+                #print "final centers", centers
+                #KMC.plot()
+                sse.append(min(KMC.SSE))
+            except:
+                pass
+        k_sse.append(min(sse))
+    #plt.plot(range(len(k_vals)), k_sse, color= 'm')
+    #plt.show()
 
