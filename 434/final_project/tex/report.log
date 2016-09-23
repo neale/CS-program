@@ -1,0 +1,92 @@
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdftex 2015.5.24)  1 JUN 2016 11:42
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**report.tex
+(./report.tex
+! Undefined control sequence.
+l.5 \documentclass
+                  [letterpaper, 10 pt, conference]{ieeeconf}  % Comment this...
+
+? 
+! Undefined control sequence.
+l.10 \IEEEoverridecommandlockouts
+                                                               % This comman...
+
+? 
+! Undefined control sequence.
+l.13 \overrideIEEEmargins
+                         
+? 
+! Undefined control sequence.
+l.27 \title
+           {\LARGE \bf
+? 
+! Undefined control sequence.
+l.27 \title{\LARGE
+                   \bf
+? 
+! Undefined control sequence.
+l.46 \author
+            {Huibert Kwakernaak$^{1}$ and Pradeep Misra$^{2}$% <-this % stop...
+
+? 
+! Undefined control sequence.
+l.47 \thanks
+            {*This work was not supported by any organization}% <-this % sto...
+
+? 
+! Undefined control sequence.
+l.48 \thanks
+            {$^{1}$H. Kwakernaak is with Faculty of Electrical Engineering, ...
+
+? 
+! Undefined control sequence.
+l.50         {\tt\small
+                        h.kwakernaak at papercept.net}}%
+? 
+! Undefined control sequence.
+l.51 \thanks
+            {$^{2}$P. Misra is with the Department of Electrical Engineering...
+
+? 
+! Undefined control sequence.
+l.53         {\tt\small
+                        p.misra at ieee.org}}%
+? 
+! Undefined control sequence.
+l.57 \begin
+           {document}
+? 
+! Undefined control sequence.
+l.61 \maketitle
+               
+? 
+! Undefined control sequence.
+l.62 \thispagestyle
+                   {empty}
+? 
+! Undefined control sequence.
+l.63 \pagestyle
+               {empty}
+? 
+! Undefined control sequence.
+l.67 \begin
+           {abstract}
+? 
+Missing character: There is no Ã in font cmr10!
+Missing character: There is no ’ in font cmr10!
+Missing character: There is no Ã in font cmr10!
+Missing character: There is no “ in font cmr10!
+[1{/usr/local/texlive/2015/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] )</us
+r/local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr
+/local/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/l
+ocal/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/loca
+l/texlive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
+Output written on report.pdf (1 page, 53138 bytes).
+PDF statistics:
+ 24 PDF objects out of 1000 (max. 8388607)
+ 16 compressed objects within 1 object stream
+ 0 named destinations out of 1000 (max. 500000)
+ 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+
