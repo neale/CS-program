@@ -1,6 +1,6 @@
 module HW1 where
 
-
+import Data.List
 --
 -- * Part 1: Binary trees
 --
@@ -14,7 +14,7 @@ data Tree = Node Int Tree Tree   -- ^ Internal nodes
 -- | An example binary tree, which will be used in tests.
 t1 :: Tree
 t1 = Node 1 (Node 2 (Node 3 (Leaf 4) (Leaf 5))
-                    (Leaf 7))
+                    (Leaf 6))
             (Node 7 (Leaf 8) (Leaf 9))
 
 -- | Another example binary tree, used in tests.
@@ -56,7 +56,14 @@ leftmost (Node _ l _) = leftmost l
 --   >>> rightmost t2
 --   9
 --
-rightmost = undefined
+rightmost :: Tree -> Int
+rightmost (Leaf i) = i
+rightmost (Node _ _ r) = rightmost r
+
+travel :: Tree -> [Int]
+travel (Leaf i) = i : []
+travel (Node i l r) = i : (travel l) ++ (travel r)
+
 
 
 -- | Get the maximum integer from a binary tree.
@@ -76,7 +83,9 @@ rightmost = undefined
 --   >>> maxInt t2
 --   9
 --
-maxInt = undefined
+maxInt :: Tree -> Int
+maxInt (Leaf i) = i
+maxInt (Node i l r) = maximum (travel (Node i l r))
 
 
 -- | Get the minimum integer from a binary tree.
@@ -96,7 +105,9 @@ maxInt = undefined
 --   >>> minInt t2
 --   1
 --
-minInt = undefined
+minInt :: Tree -> Int
+minInt (Leaf i) = i
+minInt (Node i l r) =  minimum (travel (Node i l r))
 
 
 -- | Get the sum of the integers in a binary tree.
@@ -113,7 +124,9 @@ minInt = undefined
 --   >>> sumInts (Node 10 t1 t2)
 --   100
 --
-sumInts = undefined
+sumInts :: Tree -> Int
+sumInts (Leaf i) = i
+sumInts (Node i l r) = sum (travel (Node i l r))
 
 
 -- | The list of integers encountered by a pre-order traversal of the tree.
@@ -130,8 +143,9 @@ sumInts = undefined
 --   >>> preorder t2
 --   [6,2,1,4,3,5,8,7,9]
 --   
-preorder = undefined
-
+preorder :: Tree -> [Int]
+preorder (Leaf i) = i : []
+preorder (Node i l r) = travel (Node i l r)
 
 -- | The list of integers encountered by an in-order traversal of the tree.
 --
@@ -147,8 +161,9 @@ preorder = undefined
 --   >>> inorder t2
 --   [1,2,3,4,5,6,7,8,9]
 --   
-inorder = undefined
-
+inorder :: Tree -> [Int]
+inorder (Leaf i) = i : []
+inorder (Node i l r) = i : (inorder r) ++ (inorder l)
 
 -- | Check whether a binary tree is a binary search tree.
 --
@@ -164,7 +179,15 @@ inorder = undefined
 --   >>> isBST t2
 --   True
 --   
-isBST = undefined
+sorted :: [Int] -> Bool
+sorted [] = True
+sorted [x] = True
+sorted (x:y:z) = (x <= y) && sorted (y:z) 
+
+isBST :: Tree -> Bool
+isBST (Leaf i) = True
+isBST (Node i l r) = sorted (preorder (Node i l r))
+
 
 
 -- | Check whether a number is contained in a binary search tree.
@@ -182,10 +205,9 @@ isBST = undefined
 --   >>> inBST 10 t2
 --   False
 --   
-inBST = undefined
-
-
-
+inBST :: Int -> Tree -> Bool
+inBST a (Leaf i) = (a == i)
+inBST a (Node i l r) = elem a (travel (Node i l r))
 --
 -- * Part 2: Run-length lists
 --
@@ -200,7 +222,7 @@ inBST = undefined
 --   [(1,'M'),(1,'i'),(2,'s'),(1,'i'),(2,'s'),(1,'i'),(2,'p'),(1,'i')]
 --
 compress :: Eq a => [a] -> [(Int,a)]
-compress = undefined
+compress x = [ (a, head b) | b <- group x, let a = length b ]
 
 
 -- | Convert a run-length list back into a regular list.
@@ -209,4 +231,4 @@ compress = undefined
 --   "aaaaabbbccccabb"
 --  
 decompress :: [(Int,a)] -> [a]
-decompress = concat [ [ replicate n b | (n, b) <- q ] ]
+decompress x = concat [  replicate n b | (n, b) <- x  ]
