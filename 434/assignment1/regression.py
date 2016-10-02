@@ -53,7 +53,7 @@ def main():
     # stip newline characters
     # add comma delimiters between values
 
-    with open('./train.txt', 'rb') as f:
+    with open('./train_new.txt', 'rb') as f:
         train = f.readlines()
         train = [line.strip('\n') for line in train]
         for i, line in enumerate(train):
@@ -63,7 +63,7 @@ def main():
     # train[] now is a numpy array of n_samples x n_features
 
     # read in test data
-    with open('./test.txt', 'rb') as f:
+    with open('./test_new.txt', 'rb') as f:
         test =  f.readlines()
         test =  [line.strip('\n') for line in test]
         for i, line in enumerate(test):
