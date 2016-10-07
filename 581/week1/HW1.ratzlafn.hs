@@ -163,7 +163,7 @@ preorder (Node i l r) = travel (Node i l r)
 --   
 inorder :: Tree -> [Int]
 inorder (Leaf i) = i : []
-inorder (Node i l r) = i : (inorder r) ++ (inorder l)
+inorder (Node i l r) = (inorder l) ++ [i] ++ (inorder r)
 
 -- | Check whether a binary tree is a binary search tree.
 --
@@ -186,7 +186,7 @@ sorted (x:y:z) = (x <= y) && sorted (y:z)
 
 isBST :: Tree -> Bool
 isBST (Leaf i) = True
-isBST (Node i l r) = sorted (preorder (Node i l r))
+isBST (Node i l r) = sorted (inorder (Node i l r))
 
 
 
