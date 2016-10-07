@@ -1,7 +1,10 @@
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-verbose = True
+a = [6.044, 6.03, 6.3, 6.13, 11.1, 16.54]
+b = [.0001, .001, .01, .1, 1, 100]
+c = [16, 10, 30, 208, 541, 2500]
+verbose = False
 plot = True
 """
 We're going to use the L2 norm for regularization
@@ -51,30 +54,7 @@ def preprocess(X, bias=False):
     #np.random.shuffle(X) # shuffle rows to ungroup classes
     return X, Y
 
-def batched_grad_descent(X, Y, N, epochs):
-
-    """ gradient descent using a naive gradient """
-    # initialize weights to 0 (works fine for logistic regression)
-    it = 0
-    W = np.ones(X.shape[1])
-    delta = np.zeros(W.shape)
-    while it < epochs:
-        Xiter = np.nditer(X, flags=['multi_index'], op_flags=['readwrite'])
-        while not Xiter.finished:
-
-            idx = Xiter.multi_index
-            xi = X[idx[0]]
-            dot = np.dot(W.T, xi)
-            E = (dot - Y[idx[0]])
-            delta = delta + (E * xi)
-            Xiter.iternext()
-        W = W - N*delta
-        print np.linalg.norm(W)
-        if verbose:
-            print "epoch {}, L of {}, error:\n{}".format(it, N, delta)
-        it = it+1
-    return W
-def grad_reg(X, Y, N, epochs, L):
+def grad_reg(X, Y, N, L):
 
     """ gradient descent using L2 regularization
     for all xi in X:
@@ -84,25 +64,29 @@ def grad_reg(X, Y, N, epochs, L):
     """
     # initialize weights to 0 (works fine for logistic regression)
     it = 0
-    epsilon = 1
-    W = np.ones(X.shape[1])
+    epsilon = 10
+    W = np.zeros(X.shape[1])
     delta = np.zeros(W.shape)
-    SSE = 100000000
-    while np.abs(SSE) > epsilon:
+    grad = 100000
+    while np.abs(grad) > epsilon:
         Xiter = np.nditer(X, flags=['multi_index'], op_flags=['readwrite'])
         while not Xiter.finished:
 
             idx = Xiter.multi_index
             xi = X[idx[0]]
-            E = (np.dot(W.T, xi) - Y[idx[0]])
-            SSE = np.linalg.norm(E)
-            print "SSE : ",SSE
-            delta = (E * xi) + (L*W)
+            SSE = (np.dot(W.T, xi) - Y[idx[0]])
+            grad = np.linalg.norm(SSE * xi)
+            if grad > 1000000:
+                return np.zeros(X.shape[1])
+            W = W - N * ( SSE + (L * np.linalg.norm(W)))
+
             Xiter.iternext()
-            W = W - 0.00001*delta
         if verbose:
             print "epoch {}, L OF {}, error:\n{}".format(it, N, delta)
-        it = it+1
+        print "SSE Gradient : " , grad, " , ", SSE
+        it += 1
+        print it
+    print "converged in {} epochs".format(it)
     return W
 
 def predict(X, W):
@@ -119,71 +103,66 @@ def linear_regression():
     X, test = load_data()
     X, Y = preprocess(X, bias=True)
     X_test, Y_test = preprocess(test, bias=True)
-    K = 5
+    K = 10
     epoch = 1
-    N = .05
-    Error = []
+    N = .00001
+    #plot_error(c)
+    Error, E = [], []
     foldsize = int(len(X)/K)
     E_train = np.zeros(foldsize, dtype=np.float64)
     E_val = np.zeros(foldsize, dtype=np.float64)
     print "using learning rate: {}\n\n".format(N)
 
     """ ONLY USE FOR CROSS VALIDATION """
-    #learning rates = [.000005, .00005, .0005, .005, .05, .5]
-    #regularizer = [.0001, .001, .01, .1, 1, 100]
-    regularizer = [.001, 1, 10, 100, 1000]
-    """
-    for L in range(20):
-        print "using regularization term: {}\n".format(L)
+    """rates = [.00005, .0005, .005, .05, .5, 5]
+    #regularizer = [.0001, .001, .01, .1]
+    #regularizer = [.001, 1, 10, 100, 1000]
+    L = .0000000000001
+    for N in rates:
+        print "using regularization term: {}\n".format(N)
         for i in range(K):
             print "Fold {} of {}\n".format(i, K)
             val = range(foldsize * i, foldsize * (i+1))
             train = list(set(range(len(Y))) - set(val))
             Xt = X[train,:]
+            print "Length of set : ", len(Xt)
             Yt = Y[train]
             Xval = X[val, :]
             Yval = Y[val]
-
-            #W = batched_grad_descent(Xt, Yt, N, epochs)
-            W = grad_reg(Xt, Yt, N, 3, L)
-            print sum(W)/(len(W))
-            train_accuracy = predict(Xt, W)
-            E_train[i] = float(sum(train_accuracy != Yt.flatten())) / len(Yt)
-            val_accuracy = predict(Xval, W)
-            E_val[i] = float(sum(val_accuracy != Yval.flatten())) / len(Yval)
-        print "summary:"
-        print "average train err =", np.mean(E_val) * 100, "%"
-        print "average val err =", np.mean(E_val) * 100, "%"
+            W = grad_reg(Xt, Yt, N, L)
+            E.append(test_thetas(X_test, Y_test, W))
+            
+        Error.append(E)
+        print "Average Error for L = {} : {}".format(L, np.mean(E))
+        #print "average train err =", np.mean(E_val) * 100, "%"
+        #print "average val err =", np.mean(E_val) * 100, "%"
     """
-    err = 100
-    for reg in regularizer:
-        #W = batched_grad_descent(X, Y, N, epoch)
-        W = grad_reg(X, Y, N, 15, reg)
-        #E_test = test_thetas(X_test, Y_test, W)
-        acc = predict(X, W)
-        E_test = float(sum(acc != Y.flatten())) / len(Y)
-        print "average test error = {}%".format(np.mean(E_test) * 100)
-        Error.append(E_test)
-        err = np.mean(E_test) * 100
+    print Error
+    reg = .0000001 
+    for N in [.0005, .005, .05, .5, 5]:
+       W = grad_reg(X, Y, N, reg)
+       E_test = test_thetas(X_test, Y_test, W)
+       Error.append(E_test)
 
-    #plot_error(Error)
+    plot_error(Error)
 
-def test_thetas(X_test, Y_test, W):
+def test_thetas(X, Y, W):
 
-    test_acc = predict(X_test, W)
-    #for label in range(len(Y_test.flatten())):
-        #print "testing: {} : {}".format(test_acc[label], Y_test[label])
-    E_test = float(sum(test_acc != Y_test.flatten())) / len(Y_test)
-    print "average test error = {}%".format(np.mean(E_test) * 100)
-    return np.mean(E_test)
+    E = []
+    for i, xi in enumerate(X):
+        E.append(np.abs(np.dot(W.T, xi) - Y[i]))
+    E_test = np.mean(E)
+    print "average test error = {}".format(E_test)
+    return E_test
 
 def plot_error(err):
 
+    avg_error = [np.mean(i) for i in err]
     plt.figure()
-    plt.scatter(err, range(20), color='m')
-    plt.xlabel("Iteration of gradient descent")
-    plt.ylabel("Error rate %")
-    plt.title("Logistic Regression Error With L2 Regularization")
+    plt.scatter(err, b, color='m')
+    plt.xlabel("SSE")
+    plt.ylabel("Learning Rate")
+    plt.title("Linear Regression Error With L2 Regularization")
     plt.show()
 
 if __name__ == '__main__':
