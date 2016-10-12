@@ -45,7 +45,7 @@ def load_data() :
 
     return X_dev, X_train, dev_labels, train_labels, d
 
-class BNaiveBayesClassifier(object) :
+class MNaiveBayesClassifier(object) :
 
     def __init__(self, valX, valY, X, Y, vocab) :
         self.traindata   = X
@@ -105,6 +105,6 @@ class BNaiveBayesClassifier(object) :
 if __name__ == '__main__':
 
     val_X, X, val_Y, Y, vocab = load_data()
-    clf = BNaiveBayesClassifier(val_X, val_Y, X, Y, vocab)
+    clf = MNaiveBayesClassifier(val_X, val_Y, X, Y, vocab)
     clf.fit()
     clf.score()
