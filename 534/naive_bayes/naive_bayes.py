@@ -3,7 +3,7 @@ import operator
 import numpy as np
 import matplotlib.pyplot as plt
 import os, sys
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 def load_data() :
     with open("clintontrump.bagofwords.dev", 'rb') as f:
@@ -41,11 +41,16 @@ def load_data() :
         for line in v:
             key = line[0]
             d[key].append(line[-1])
-            d[key].extend((0., 0., 0.))
-
+            d[key].extend((0., 0., 0., 0., 0.))
+            # appending fields for
+            # * times word appears in clinton tweet
+            # * times word appears in trump tweet
+            # * total occurances in dataset
+            # * MLE for clinton
+            # * MLE for trump
     return X_dev, X_train, dev_labels, train_labels, d
 
-class BNaiveBayesClassifier(object) :
+class BnaiveBayesClassifier(object) :
 
     def __init__(self, valX, valY, X, Y, vocab) :
         self.traindata   = X
@@ -53,19 +58,89 @@ class BNaiveBayesClassifier(object) :
         self.valdata     = valX
         self.vallabels   = valY
         self.vocab       = vocab
-        self.Hprior      = []
-        self.Tmodel      = []
+        self.Hprior      = 0
+        self.Tprior      = 0
+        self.H           = {'id' : 0, 'name' : 'CLINTON', 'score' : 0}
+        self.T           = {'id' : 1, 'name' : 'TRUMP', 'score' : 0}
     def fit(self) :
 
         #read in vocabulary as dict of { [#clinton, #trump, P(X)]
         #allows easy computation of P(Xi | C) and P(Xi | T)
         ##count words (bernoulli)
         #Of the twwets, how many times does any Xi occur in a clinton tweet, or in a trump tweet
-        Tcount = float(sum(self.trainlabels)) / len(self.trainlabels);
-        Hcount = (len(self.trainlabels) - sum(self.trainlabels)) / float(len(self.trainlabels))
+        self.Tprior = float(sum(self.trainlabels)) / len(self.trainlabels);
+        self.Hprior = (len(self.trainlabels) - sum(self.trainlabels)) / float(len(self.trainlabels))
 
         for idx, tweet in enumerate(self.traindata):
             bernoulli = set(tweet)
+            for word in bernoulli:
+                if self.trainlabels[idx] is 0:
+                    self.vocab[word][1] += 1
+                else:
+                    self.vocab[word][2] += 1
+
+                self.vocab[word][3] += 1
+
+        self.H['words'] = np.sum([1 for item in self.vocab.items() if item[-1][1] > 0])
+        self.T['words'] = np.sum([1 for item in self.vocab.items() if item[-1][2] > 0])
+
+
+    def predict(self):
+
+        correct = 0.
+        for idx, tweet in enumerate(self.traindata):
+
+            H_cond = [self.vocab[word][1]/self.H['words'] for word in set(tweet)]
+            T_cond = [self.vocab[word][2]/self.T['words'] for word in set(tweet)]
+
+            if self.trainlabels[idx] is 0 : name = "CLINTON"
+            else                          : name = "TRUMP"
+
+            H_sum = np.sum(H_cond)
+            T_sum = np.sum(T_cond)
+
+            H_pred = abs(np.log(self.Hprior * H_sum))
+            T_pred = abs(np.log(self.Tprior * T_sum))
+
+            self.H['score'] = H_pred
+            self.T['score'] = T_pred
+
+            if H_pred < T_pred : pred = self.H
+            else               : pred = self.T
+
+            if pred['id'] is not self.trainlabels[idx] :
+                print "MISMATCH ERROR naive bayes predicted : {} with real label : {}".format(pred['name'], name)
+                rlwords = ' '.join([self.vocab[word][0].strip('\n') for word in tweet])+'\n'
+                print rlwords
+            else:
+                print "CORRECT naive bayes predicted : {} with real label : {}".format(pred['name'], name)
+                correct += 1
+
+        print "ACCURACY : {}%".format(correct/len(self.traindata) * 100.)
+
+class MnaiveBayesClassifier(object) :
+
+
+    def __init__(self, valX, valY, X, Y, vocab) :
+        self.traindata   = X
+        self.trainlabels = Y
+        self.valdata     = valX
+        self.vallabels   = valY
+        self.vocab       = vocab
+        self.Hprior      = 0
+        self.Tprior      = 0
+        self.H           = {'id' : 0, 'name' : 'CLINTON', 'score' : 0}
+        self.T           = {'id' : 1, 'name' : 'TRUMP', 'score' : 0}
+    def fit(self) :
+
+        #read in vocabulary as dict of { [#clinton, #trump, P(X)]
+        #allows easy computation of P(Xi | C) and P(Xi | T)
+        ##count words (bernoulli)
+        #Of the twwets, how many times does any Xi occur in a clinton tweet, or in a trump tweet
+        self.Tprior = float(sum(self.trainlabels)) / len(self.trainlabels);
+        self.Hprior = (len(self.trainlabels) - sum(self.trainlabels)) / float(len(self.trainlabels))
+
+        for idx, tweet in enumerate(self.traindata):
             for word in tweet:
                 if self.trainlabels[idx] is 0:
                     self.vocab[word][1] += 1
@@ -73,38 +148,57 @@ class BNaiveBayesClassifier(object) :
                     self.vocab[word][2] += 1
 
                 self.vocab[word][3] += 1
-#        print self.vocab
-        i = 1
-        z = len(self.vocab.items())
-        #print max(self.vocab.items(), key=lambda x: x[-1][3])
-        Hvocab = [item for item in self.vocab.items() if item[-1][1] > 0]
-        Tvocab = [item for item in self.vocab.items() if item[-1][2] > 0]
 
-        HXi_list = [np.log((item[-1][1]+1)/(len(Hvocab))) for item in self.vocab.items()]
-        TXi_list = [np.log((item[-1][2]+1)/(len(Tvocab))) for item in self.vocab.items()]
+        self.H['words'] = np.sum([1 for item in self.vocab.items() if item[-1][1] > 0])
+        self.T['words'] = np.sum([1 for item in self.vocab.items() if item[-1][2] > 0])
+
+        for item in self.vocab.items():
+            item[-1][4] = item[-1][1]+1/(self.H['words']+len(self.vocab.keys()))
+            item[-1][5] = item[-1][2]+1/(self.T['words']+len(self.vocab.keys()))
 
 
-        #print HXi_list, len(HXi_list)
-        Hnb = np.sum(HXi_list) #reduce(lambda x, y: x * y, HXi_list)
-        Tnb = np.sum(TXi_list) #reduce(lambda x, y: x * y, TXi_list)
+    def predict(self):
 
-        Hnb + np.log(Hcount)
-        Tnb + np.log(Tcount)
-
-        self.Hprior = Hnb
-        self.Tprior = Tnb
-
-    def score(self) :
-
+        correct = 0.
         for idx, tweet in enumerate(self.traindata):
-            for word in tweet:
-                print self.vocab[word], " : ", self.Hprior[word], " , ", self.Tprior[word]
-        pass
+            words = Counter(tweet)
+            H_cond = [np.log(self.vocab[word[0]][4]) * word[1] for word in words.items()]
+            T_cond = [np.log(self.vocab[word[0]][5]) * word[1] for word in words.items()]
+
+            if self.trainlabels[idx] is 0 : name = "CLINTON"
+            else                          : name = "TRUMP"
+
+            H_sum = np.sum(H_cond)
+            T_sum = np.sum(T_cond)
+
+            H_pred = abs(np.log(self.Hprior) + H_sum)
+            T_pred = abs(np.log(self.Tprior) + T_sum)
+
+            self.H['score'] = H_pred
+            self.T['score'] = T_pred
+
+            if H_pred < T_pred : pred = self.H
+            else               : pred = self.T
+
+            if pred['id'] is not self.trainlabels[idx] :
+                print "MISMATCH ERROR naive bayes predicted : {} with real label : {}".format(pred['name'], name)
+                rlwords = ' '.join([self.vocab[word][0].strip('\n') for word in tweet])+'\n'
+                print rlwords
+            else:
+                print "CORRECT naive bayes predicted : {} with real label : {}".format(pred['name'], name)
+                correct += 1
+
+        print "ACCURACY : {}%".format(correct/len(self.traindata) * 100.)
 
 
 if __name__ == '__main__':
 
     val_X, X, val_Y, Y, vocab = load_data()
-    clf = BNaiveBayesClassifier(val_X, val_Y, X, Y, vocab)
+    clf = BnaiveBayesClassifier(val_X, val_Y, X, Y, vocab)
     clf.fit()
-    clf.score()
+    clf.predict()
+
+    clf = MnaiveBayesClassifier(val_X, val_Y, X, Y, vocab)
+    clf.fit()
+    clf.predict()
+
