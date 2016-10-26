@@ -257,6 +257,7 @@ class MnaiveBayesClassifier(object) :
     def predict(self):
 
         correct = 0.
+        tweets = []
         for idx, tweet in enumerate(self.valdata):
             words = Counter(tweet)
             H_cond = [np.log(self.vocab[word[0]][4]) * word[1] for word in words.items()]
@@ -279,13 +280,19 @@ class MnaiveBayesClassifier(object) :
             self.predictions.append((tweet, pred['id']))
 
             if pred['id'] is not self.vallabels[idx] :
+                tweets.append(tweet)
+
                 #print "MISMATCH ERROR naive bayes predicted : {} with real label : {}".format(pred['name'], name)
                 rlwords = ' '.join([self.vocab[word][0].strip('\n') for word in tweet])+'\n'
                 #print rlwords
             else:
                 #print "CORRECT naive bayes predicted : {} with real label : {}".format(pred['name'], name)
                 correct += 1
-
+        mis_words = [item for sublist in tweets for item in sublist]
+        print mis_words
+        mis_words = [self.vocab[word][0] for word in mis_words]
+        mis_count = Counter(mis_words)
+        print mis_count
         self.accuracy = correct / (len(self.vallabels)) * 100
 
     def get_top(self, topk):
