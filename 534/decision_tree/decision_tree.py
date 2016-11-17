@@ -6,9 +6,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import collections
 
+verbose = False
+
 def import_data():
     
-    with open('iris_train-1.csv', 'rb') as f:
+    with open('iris_test-1.csv', 'rb') as f:
         X = f.readlines()
         for i, l in enumerate(X):
             X[i] = X[i].strip('\r\n').split(';')
@@ -87,33 +89,74 @@ def entropy(X, feature, theta):
 
     return H
 
+# generalized printing structure for debugging 
+def pprint(s, priority):
+    
+    if verbose:
+        print s
+    else:
+        if priority == 1:
+            print s
+
+def split_data(X, feature, split):
+
+    L = []
+    R = []
+    for row in X:
+        if row[feature] > split : L.append(row)
+        else                    : R.append(row)
+
+    return L, R
 
 class RandomForest(object):
 
-    def __init__(self, Xtr, Ytr, Xte, Yte, n):
+    def __init__(self, Xtr, Ytr, Xte, Yte, n, k):
         self.X_train = Xtr
         self.Y_train = Ytr
         self.X_test  = Xte
         self.Y_test  = Yte
-        n_trees      = n
-	self.gain  = []
+        self.n_trees = n
+        self.tests   = []
+        self.K       = k
    
     def apply(self):
 	pass
 
-    def fit(self):
-        # get feature with the highest information gain
+    def __build_tree(self, X, dir=None, memo=None):
         theta = 0
-        total_examples = len(self.X_train[1])
-        for col in range(total_examples-1):
-            print "*** Feature {} ***".format(col)
+        splits = []
+        gain   = []
+        n_features = len(X[0]) -1
+        print "length: {}".format( len(X) )
+        if len(X) <= self.K:
+            return memo
+        for col in range(n_features):
             # for each feature we need to compute information gain by splitting on some threshold
-            for threshold in range(10):
-                self.gain.append( ( np.exp ( entropy(self.X_train, col, threshold) ), threshold ) )
+            gain = []
+            for threshold in range(1, 10):
+                # save the information gain for each split into a list
+                gain.append( ( np.exp ( entropy(X, col, threshold) ), threshold, col ) )
+            # save the best split for that feature into another list
+            splits.append( max(gain, key=operator.itemgetter(0)) )
+            pprint ("gain for feature {} is a split of theta = {} : {}".format(col, splits[-1][1], splits[-1][0]), 0)
+        # The chosen split is then the maximum gain from all the features tested
+        test  = max (splits, key=operator.itemgetter(0))
+        feat  = test[-1]
+        split = test[1]
+        # save split into global list of splits that we will use for predict
+        pprint ("\nsplit on feature {} with theta of {}".format(feat, split), 1)
+        splitL, splitR = split_data(X, feat, split)
+        self.tests.append( self.__build_tree(splitL, 'L', test) )
+        self.tests.append( self.__build_tree(splitR, 'R', test) )
 
-            t = max(self.gain, key=operator.itemgetter(0))
-            print "gain for feature {} is a split of theta = {} : {}".format(col, t[1], t[0])
-            self.gain = []
+
+    def fit(self):
+        self.__build_tree(self.X_train)
+        pprint("printing decision tree\n", 1)
+        for i, test in enumerate(self.tests):
+            pprint("{}: Split feature {} on {}".format(i+1, test[1], test[2]), 1)
+        pprint ("\nDONE", 1)
+
     def predict(self):
 	pass
 
@@ -124,7 +167,7 @@ class RandomForest(object):
 if __name__ == '__main__':
     
     Xtr, Ytr, Xte, Yte = import_data()
-    clf = RandomForest(Xtr, Ytr, Xte, Yte, 1)
+    clf = RandomForest(Xtr, Ytr, Xte, Yte, 1, 5)
     
     clf.fit()
     clf.predict()
