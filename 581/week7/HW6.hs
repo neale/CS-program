@@ -19,12 +19,9 @@ import Church
 --     eval (app2 setFst (app2 pair (num 2) (num 3)) true)
 --   :}
 --   True
-
-setFst :: (Exp -> Exp)
-setFst = app2 pair fst
---setFst a b = case (eval a) b of
---                   (num x) -> app3 pair (fst a)) b
---                   _     -> setFst a b
+--
+setFst :: Exp -> Exp
+setFst ( (app2 pair a b) c) = app2 pair c b
 
 -- | 2. A lambda calculus function that replaces the second element in a
 --   Church-encoded pair. The first argument to the function is the original
@@ -36,8 +33,9 @@ setFst = app2 pair fst
 --   :}
 --   True
 --
-setSnd :: Exp -> Exp -> Exp
-setSnd a b = eval (app2 pair b a)
+--setSnd :: Exp
+--setSnd = undefined
+
 
 --
 -- * Part 2: Church encoding a Haskell program
@@ -60,16 +58,16 @@ bar (P n b)   = n + if b then 1 else 0
 
 -- | 3. Write a Haskell function that converts a Foo into a
 --   lambda calculus term.
---encodeFoo :: Foo -> Exp
+encodeFoo :: Foo -> Exp
 --encodeFoo = undefined
 
 -- | 4. Implement the bar function as a lambda calculus term.
---barExp :: Exp
+barExp :: Exp
 --barExp = undefined
 
 -- | Run your lambda-encoded bar function on a lambda-encoded Foo.
---runBar :: Foo -> Exp
---runBar x = eval (App barExp (encodeFoo x))
+runBar :: Foo -> Exp
+runBar x = eval (App barExp (encodeFoo x))
 
 -- | A function for testing encodeFoo and barExp. Checks to see if the lambda
 --   calculus encoding returns the same number as the given value function.
@@ -89,5 +87,5 @@ bar (P n b)   = n + if b then 1 else 0
 --   >>> test (P 5 False)
 --   True
 --
---test :: Foo -> Bool
---test x = num (bar x) == eval (App barExp (encodeFoo x))
+test :: Foo -> Bool
+test x = num (bar x) == eval (App barExp (encodeFoo x))
