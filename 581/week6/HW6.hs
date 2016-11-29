@@ -2,6 +2,7 @@ module HW6 where
 
 import Prelude hiding (and,or,not,pred,succ,fst,snd,either)
 
+import Data.Maybe
 import DeBruijn
 import Church
 
@@ -20,11 +21,8 @@ import Church
 --   :}
 --   True
 
-setFst :: (Exp -> Exp)
-setFst = app2 pair fst
---setFst a b = case (eval a) b of
---                   (num x) -> app3 pair (fst a)) b
---                   _     -> setFst a b
+setFst :: Exp
+setFst = abs2 ( app2 pair (Ref 0) (App snd (Ref 1)) )
 
 -- | 2. A lambda calculus function that replaces the second element in a
 --   Church-encoded pair. The first argument to the function is the original
@@ -36,8 +34,8 @@ setFst = app2 pair fst
 --   :}
 --   True
 --
-setSnd :: Exp -> Exp -> Exp
-setSnd a b = eval (app2 pair b a)
+setSnd :: Exp 
+setSnd = abs2 ( app2 pair (App fst (Ref 1)) (Ref 0) )
 
 --
 -- * Part 2: Church encoding a Haskell program
@@ -60,16 +58,69 @@ bar (P n b)   = n + if b then 1 else 0
 
 -- | 3. Write a Haskell function that converts a Foo into a
 --   lambda calculus term.
---encodeFoo :: Foo -> Exp
---encodeFoo = undefined
+encodeFoo :: Foo -> Exp
+encodeFoo (N n)     = Abs (app2 mult (num n) three)
+-- or     (N n)     = num n
+encodeFoo (B True)  = one
+encodeFoo (B False) = zero
+encodeFoo (P n b)   = abs2 ( app2 add (num n) (app3 if_ (bExp' (b == True)) one zero) )
+-- or     (P n b)   = app2 pair (num n) (bExp' b)
 
 -- | 4. Implement the bar function as a lambda calculus term.
---barExp :: Exp
---barExp = undefined
+bExp :: Foo -> Maybe Exp
+bExp (B True)  = Just true
+bExp (B False) = Just false
+_              = Nothing 
+
+nExp :: Foo -> Maybe Exp
+nExp (N n) = Just (num n)
+_          = Nothing
+
+pExp :: Foo -> Exp
+pExp (P n b) = app2 pair (num n) (bExp' b)
+
+bExp' :: Bool -> Exp
+bExp' True  = true
+bExp' False = false
+
+toFoo :: Exp -> Foo
+toFoo false = (B False)
+toFoo true  = (B True)
+toFoo one   = (N 1)
+toFoo zero  = (N 0)
+_           = (N 4)
+
+
+
+--buildInt :: Exp -> Int
+
+-- test (N 4) doesnt work
+-- I assumed that Ref 0 in line 104 would be an Exp number
+-- Then we multiply it by 3. But I dont know why its not returning true
+-- I shouldnt need to convert to a foo, just operate right on the Exp
+-- Could be an error in the line above
+--
+barExp :: Exp
+barExp = Abs ( 
+              app3 if_ (bExp' (isJust (bExp (toFoo (Ref 0))))) 
+              ( app3 if_ (bExp' ((fromJust (bExp (toFoo (Ref 0)))) == true)) 
+                  one 
+                  zero
+              ) 
+              ( app3 if_ (bExp' (isJust (nExp (toFoo (Ref 0)))))
+                  ( app2 mult (Ref 0) three ) 
+                  ( app2 add (App fst (pExp (toFoo (Ref 0)))) 
+                      (app3 if_ (bExp' ((App snd (fromJust (bExp (toFoo (Ref 0))))) == true)) 
+                        one 
+                        zero
+                      )   
+                  )
+              )
+          )
 
 -- | Run your lambda-encoded bar function on a lambda-encoded Foo.
---runBar :: Foo -> Exp
---runBar x = eval (App barExp (encodeFoo x))
+runBar :: Foo -> Exp
+runBar x = eval (App barExp (encodeFoo x))
 
 -- | A function for testing encodeFoo and barExp. Checks to see if the lambda
 --   calculus encoding returns the same number as the given value function.
@@ -89,5 +140,5 @@ bar (P n b)   = n + if b then 1 else 0
 --   >>> test (P 5 False)
 --   True
 --
---test :: Foo -> Bool
---test x = num (bar x) == eval (App barExp (encodeFoo x))
+test :: Foo -> Bool
+test x = num (bar x) == eval (App barExp (encodeFoo x))
