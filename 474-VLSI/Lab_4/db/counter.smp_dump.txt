@@ -1,6 +1,0 @@
-
-State Machine - |counter|select_state
-Name select_state.100 select_state.010 select_state.001 
-select_state.001 0 0 0 
-select_state.010 0 1 1 
-select_state.100 1 0 1 
