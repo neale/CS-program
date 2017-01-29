@@ -1,0 +1,194 @@
+# do ROM_run_msim_rtl_verilog.do
+# if {[file exists rtl_work]} {
+# 	vdel -lib rtl_work -all
+# }
+# vlib rtl_work
+# vmap work rtl_work
+# Model Technology ModelSim ALTERA vmap 10.4b Lib Mapping Utility 2015.05 May 27 2015
+# vmap -modelsim_quiet work rtl_work 
+# Copying /home/enratzz/altera_lite/15.1/modelsim_ase/linuxaloem/../modelsim.ini to modelsim.ini
+# Modifying modelsim.ini
+# ** Warning: Copied /home/enratzz/altera_lite/15.1/modelsim_ase/linuxaloem/../modelsim.ini to modelsim.ini.
+#          Updated modelsim.ini.
+# 
+# vlog -vlog01compat -work work +incdir+/home/enratzz/altera_lite/15.1/Lab_5 {/home/enratzz/altera_lite/15.1/Lab_5/frame_rate.v}
+# Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+# Start time: 12:13:52 on May 13,2016
+# vlog -reportprogress 300 -vlog01compat -work work "+incdir+/home/enratzz/altera_lite/15.1/Lab_5" /home/enratzz/altera_lite/15.1/Lab_5/frame_rate.v 
+# -- Compiling module frame_rate
+# 
+# Top level modules:
+# 	frame_rate
+# End time: 12:13:52 on May 13,2016, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# vlog -vlog01compat -work work +incdir+/home/enratzz/altera_lite/15.1/Lab_5/db {/home/enratzz/altera_lite/15.1/Lab_5/db/frame_rate_altpll.v}
+# Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+# Start time: 12:13:52 on May 13,2016
+# vlog -reportprogress 300 -vlog01compat -work work "+incdir+/home/enratzz/altera_lite/15.1/Lab_5/db" /home/enratzz/altera_lite/15.1/Lab_5/db/frame_rate_altpll.v 
+# -- Compiling module frame_rate_altpll
+# 
+# Top level modules:
+# 	frame_rate_altpll
+# End time: 12:13:52 on May 13,2016, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# vlog -sv -work work +incdir+/home/enratzz/altera_lite/15.1/Lab_5 {/home/enratzz/altera_lite/15.1/Lab_5/sine_rom.sv}
+# Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+# Start time: 12:13:52 on May 13,2016
+# vlog -reportprogress 300 -sv -work work "+incdir+/home/enratzz/altera_lite/15.1/Lab_5" /home/enratzz/altera_lite/15.1/Lab_5/sine_rom.sv 
+# -- Compiling module sine_rom
+# 
+# Top level modules:
+# 	sine_rom
+# End time: 12:13:53 on May 13,2016, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# vlog -sv -work work +incdir+/home/enratzz/altera_lite/15.1/Lab_5 {/home/enratzz/altera_lite/15.1/Lab_5/debounce.sv}
+# Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+# Start time: 12:13:53 on May 13,2016
+# vlog -reportprogress 300 -sv -work work "+incdir+/home/enratzz/altera_lite/15.1/Lab_5" /home/enratzz/altera_lite/15.1/Lab_5/debounce.sv 
+# -- Compiling module debounce
+# 
+# Top level modules:
+# 	debounce
+# End time: 12:13:53 on May 13,2016, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# vlog -sv -work work +incdir+/home/enratzz/altera_lite/15.1/Lab_5 {/home/enratzz/altera_lite/15.1/Lab_5/ROM.sv}
+# Model Technology ModelSim ALTERA vlog 10.4b Compiler 2015.05 May 27 2015
+# Start time: 12:13:53 on May 13,2016
+# vlog -reportprogress 300 -sv -work work "+incdir+/home/enratzz/altera_lite/15.1/Lab_5" /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv 
+# -- Compiling module ROM
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(69): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(70): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(71): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(72): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(73): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(74): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(75): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(76): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(77): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(78): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(69): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(70): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(71): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(72): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(73): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(74): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(75): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(76): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(77): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(78): (vlog-2110) Illegal reference to net "segments".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(207): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(209): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(214): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(216): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(221): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(223): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(226): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(207): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(209): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(214): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(216): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(221): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(223): (vlog-2110) Illegal reference to net "select".
+# ** Error: /home/enratzz/altera_lite/15.1/Lab_5/ROM.sv(226): (vlog-2110) Illegal reference to net "select".
+# End time: 12:13:53 on May 13,2016, Elapsed time: 0:00:00
+# Errors: 34, Warnings: 0
+# ** Error: /home/enratzz/altera_lite/15.1/modelsim_ase/linuxaloem/vlog failed.
+# Error in macro ./ROM_run_msim_rtl_verilog.do line 12
+# /home/enratzz/altera_lite/15.1/modelsim_ase/linuxaloem/vlog failed.
+#     while executing
+# "vlog -sv -work work +incdir+/home/enratzz/altera_lite/15.1/Lab_5 {/home/enratzz/altera_lite/15.1/Lab_5/ROM.sv}"
+# 
+# stdin: <EOF>
+vcom -reportprogress 300 -work work /home/enratzz/altera_lite/15.1/Lab_5/simulation/modelsim/ROM.vho
+# Model Technology ModelSim ALTERA vcom 10.4b Compiler 2015.05 May 27 2015
+# Start time: 12:16:44 on May 13,2016
+# vcom -reportprogress 300 -work work /home/enratzz/altera_lite/15.1/Lab_5/simulation/modelsim/ROM.vho 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package VITAL_Timing
+# -- Loading package VITAL_Primitives
+# -- Loading package dffeas_pack
+# -- Loading package altera_primitives_components
+# -- Loading package cycloneive_atom_pack
+# -- Loading package cycloneive_components
+# -- Compiling entity ROM
+# -- Compiling architecture structure of ROM
+# End time: 12:16:44 on May 13,2016, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+run
+# No Design Loaded!
+run 10
+# No Design Loaded!
+load ROM
+# couldn't load file "ROM": ROM: cannot open shared object file: No such file or directory
+load ROM.vho
+# couldn't load file "ROM.vho": ROM.vho: invalid ELF header
+load ROM.sv
+# couldn't load file "ROM.sv": ROM.sv: cannot open shared object file: No such file or directory
+vsim work.rom
+# vsim work.rom 
+# Start time: 12:17:24 on May 13,2016
+# Loading std.standard
+# Loading std.textio(body)
+# Loading ieee.std_logic_1164(body)
+# Loading ieee.vital_timing(body)
+# Loading ieee.vital_primitives(body)
+# Loading altera.dffeas_pack
+# Loading altera.altera_primitives_components
+# Loading cycloneive.cycloneive_atom_pack(body)
+# Loading cycloneive.cycloneive_components
+# Loading work.rom(structure)
+# Loading ieee.std_logic_arith(body)
+# Loading cycloneive.cycloneive_io_obuf(arch)
+# Loading cycloneive.cycloneive_io_ibuf(arch)
+# Loading cycloneive.cycloneive_pllpack(body)
+# Loading ieee.std_logic_unsigned(body)
+# Loading cycloneive.cycloneive_pll(vital_pll)
+# Loading cycloneive.cycloneive_mn_cntr(behave)
+# Loading cycloneive.cycloneive_scale_cntr(behave)
+# Loading cycloneive.cycloneive_clkctrl(vital_clkctrl)
+# Loading cycloneive.cycloneive_ena_reg(behave)
+# Loading altera.dffeas(vital_dffeas)
+# Loading cycloneive.cycloneive_lcell_comb(vital_lcell_comb)
+# ** Warning: Design size of 60588 statements exceeds ModelSim Altera Starter recommended capacity.
+# Expect performance to be adversely affected.
+run 10ns
+force reset 0
+force reset 1
+run 10ns
+force reset 0
+run 10ns
+force phase_acc 10
+# ** Error (suppressible): (vish-4008) Object 'phase_acc' not found.
+# 
+vsim rtl_work.rom
+# End time: 12:20:35 on May 13,2016, Elapsed time: 0:03:11
+# Errors: 1, Warnings: 1
+# vsim rtl_work.rom 
+# Start time: 12:20:35 on May 13,2016
+# Loading std.standard
+# Loading std.textio(body)
+# Loading ieee.std_logic_1164(body)
+# Loading ieee.vital_timing(body)
+# Loading ieee.vital_primitives(body)
+# Loading altera.dffeas_pack
+# Loading altera.altera_primitives_components
+# Loading cycloneive.cycloneive_atom_pack(body)
+# Loading cycloneive.cycloneive_components
+# Loading rtl_work.rom(structure)
+# Loading ieee.std_logic_arith(body)
+# Loading cycloneive.cycloneive_io_obuf(arch)
+# Loading cycloneive.cycloneive_io_ibuf(arch)
+# Loading cycloneive.cycloneive_pllpack(body)
+# Loading ieee.std_logic_unsigned(body)
+# Loading cycloneive.cycloneive_pll(vital_pll)
+# Loading cycloneive.cycloneive_mn_cntr(behave)
+# Loading cycloneive.cycloneive_scale_cntr(behave)
+# Loading cycloneive.cycloneive_clkctrl(vital_clkctrl)
+# Loading cycloneive.cycloneive_ena_reg(behave)
+# Loading altera.dffeas(vital_dffeas)
+# Loading cycloneive.cycloneive_lcell_comb(vital_lcell_comb)
+# ** Warning: Design size of 60588 statements exceeds ModelSim Altera Starter recommended capacity.
+# Expect performance to be adversely affected.
+run 10ns

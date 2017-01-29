@@ -1,0 +1,1 @@
+“Scores” are user algorithms created by dragging gates to control Qubit functions in the “Quantum Composer” GUI to create Results.

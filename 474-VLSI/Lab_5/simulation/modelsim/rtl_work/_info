@@ -1,0 +1,151 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/home/enratzz/altera_lite/15.1/Lab_5/simulation/modelsim
+vdebounce
+Z1 DXx6 sv_std 3 std 0 22 WmjPaeP=7F5?QFXzJ>D[Q2
+Z2 !s110 1463166833
+!i10b 1
+!s100 3bBG4^RhHDJX9:f1bIf1k3
+IjGA7giHfFEWS<HL67k_Bl3
+Z3 VDg1SIo80bB@j0V0VzS_@n1
+!s105 debounce_sv_unit
+S1
+R0
+w1463097968
+8/home/enratzz/altera_lite/15.1/Lab_5/debounce.sv
+F/home/enratzz/altera_lite/15.1/Lab_5/debounce.sv
+L0 1
+Z4 OV;L;10.4b;61
+r1
+!s85 0
+31
+!s108 1463166833.000000
+!s107 /home/enratzz/altera_lite/15.1/Lab_5/debounce.sv|
+!s90 -reportprogress|300|-sv|-work|work|+incdir+/home/enratzz/altera_lite/15.1/Lab_5|/home/enratzz/altera_lite/15.1/Lab_5/debounce.sv|
+!i113 1
+Z5 o-sv -work work
+Z6 !s92 -sv -work work +incdir+/home/enratzz/altera_lite/15.1/Lab_5
+vframe_rate
+Z7 !s110 1463166832
+!i10b 1
+!s100 KYoQ1g0a?il0;=4U0C29Y2
+I::Wf]JP@59ekPOZmEh<7K0
+R3
+R0
+w1463097980
+8/home/enratzz/altera_lite/15.1/Lab_5/frame_rate.v
+F/home/enratzz/altera_lite/15.1/Lab_5/frame_rate.v
+L0 40
+R4
+r1
+!s85 0
+31
+Z8 !s108 1463166832.000000
+!s107 /home/enratzz/altera_lite/15.1/Lab_5/frame_rate.v|
+!s90 -reportprogress|300|-vlog01compat|-work|work|+incdir+/home/enratzz/altera_lite/15.1/Lab_5|/home/enratzz/altera_lite/15.1/Lab_5/frame_rate.v|
+!i113 1
+Z9 o-vlog01compat -work work
+!s92 -vlog01compat -work work +incdir+/home/enratzz/altera_lite/15.1/Lab_5
+vframe_rate_altpll
+R7
+!i10b 1
+!s100 `o>;SZGVL>MILQagE=dRH2
+I`NjYMhKf<@RhM1kz4RVVJ0
+R3
+R0
+w1463104658
+8/home/enratzz/altera_lite/15.1/Lab_5/db/frame_rate_altpll.v
+F/home/enratzz/altera_lite/15.1/Lab_5/db/frame_rate_altpll.v
+L0 30
+R4
+r1
+!s85 0
+31
+R8
+!s107 /home/enratzz/altera_lite/15.1/Lab_5/db/frame_rate_altpll.v|
+!s90 -reportprogress|300|-vlog01compat|-work|work|+incdir+/home/enratzz/altera_lite/15.1/Lab_5/db|/home/enratzz/altera_lite/15.1/Lab_5/db/frame_rate_altpll.v|
+!i113 1
+R9
+!s92 -vlog01compat -work work +incdir+/home/enratzz/altera_lite/15.1/Lab_5/db
+Erom
+Z10 w1463107943
+Z11 DPx10 cycloneive 20 cycloneive_atom_pack 0 22 9L7WOjalBLjVlJ:R>F9:13
+Z12 DPx10 cycloneive 21 cycloneive_components 0 22 zHe@=:>9cbU;4Xj]jOJ^60
+Z13 DPx4 ieee 16 vital_primitives 0 22 G>kiXP8Q9dRClKfK1Zn7j1
+Z14 DPx6 altera 11 dffeas_pack 0 22 VGN[`NdbD557>Wc5mPGc93
+Z15 DPx4 ieee 12 vital_timing 0 22 J>EBealN09f8GzldA[z2>3
+Z16 DPx3 std 6 textio 0 22 zE1`LPoLg^DX3Oz^4Fj1K3
+Z17 DPx4 ieee 14 std_logic_1164 0 22 eNV`TJ_GofJTzYa?f<@Oe1
+Z18 DPx6 altera 28 altera_primitives_components 0 22 z;MfmOU0<abV50UVn9d221
+R0
+Z19 8/home/enratzz/altera_lite/15.1/Lab_5/simulation/modelsim/ROM.vho
+Z20 F/home/enratzz/altera_lite/15.1/Lab_5/simulation/modelsim/ROM.vho
+l0
+L37
+VDbhLRFN`bkk]X_UQ@fFRi3
+!s100 ;eQ3j[_mIlb2a9zSP72@:1
+Z21 OV;C;10.4b;61
+32
+Z22 !s110 1463167004
+!i10b 1
+Z23 !s108 1463167004.000000
+Z24 !s90 -reportprogress|300|-work|work|/home/enratzz/altera_lite/15.1/Lab_5/simulation/modelsim/ROM.vho|
+Z25 !s107 /home/enratzz/altera_lite/15.1/Lab_5/simulation/modelsim/ROM.vho|
+!i113 1
+Z26 o-work work
+Z27 tExplicit 1
+Astructure
+R11
+R12
+R13
+R14
+R15
+R16
+R17
+R18
+DEx4 work 3 rom 0 22 DbhLRFN`bkk]X_UQ@fFRi3
+l595
+L86
+VA700>R<3m8:hdkPH3aXYQ1
+!s100 Dd8:AWC2D;1Uf`9faoeA=2
+R21
+32
+R22
+!i10b 1
+R23
+R24
+R25
+!i113 1
+R26
+R27
+vsine_rom
+R1
+R2
+!i10b 1
+!s100 ZYb6IgVVQc7dCLBo<gO2g2
+INnU_UAEKWOE0:QkOV:bLz2
+R3
+!s105 sine_rom_sv_unit
+S1
+R0
+w1463164956
+8/home/enratzz/altera_lite/15.1/Lab_5/sine_rom.sv
+F/home/enratzz/altera_lite/15.1/Lab_5/sine_rom.sv
+L0 1
+R4
+r1
+!s85 0
+31
+R8
+!s107 /home/enratzz/altera_lite/15.1/Lab_5/sine_rom.sv|
+!s90 -reportprogress|300|-sv|-work|work|+incdir+/home/enratzz/altera_lite/15.1/Lab_5|/home/enratzz/altera_lite/15.1/Lab_5/sine_rom.sv|
+!i113 1
+R5
+R6
