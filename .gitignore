@@ -9,7 +9,7 @@ Session.vim
 *~
 *.zip
 *.tar
-
+*.p
 ### C ###
 # Object files
 *.o
