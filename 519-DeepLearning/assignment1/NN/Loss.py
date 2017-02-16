@@ -6,12 +6,17 @@ class CrossEntropy(object):
         
         pass
  
-    def loss(self, out, y):
+    def forward(self, out, y):
 
-        return -(y * np.log(out) + (1.01 - y) * np.log(1.01 - out))
+        loss = lambda x, y: -(y * np.log(x +.0001) + (1.01 - y) * np.log(1.01 - x))
 
-    def loss_batch(self, out, y):        
-      
-        return np.mean(self.loss(out, y)) 
-    
+        if out.ndim > 1:
+            return np.mean(loss(out, y))
+        else:
+            return loss(out, y)
+
+        
+    def backward(self, out, y):
+
+        return np.subtract(out, y)
 
