@@ -16,10 +16,29 @@ from keras.datasets import cifar10
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation, Flatten
+from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, AveragePooling2D
-from keras.optimizers import SGD
+from keras.optimizers import SGD, RMSprop, Adagrad, Adam
 from keras.utils import np_utils
 from keras import backend as K
+import matplotlib.pyplot as plt
+import h5py
+import sys
+
+def pop_layer(model):
+    if not model.outputs:
+        raise Exception('Sequential model cannot be popped: model is empty.')
+
+    model.layers.pop()
+    if not model.layers:
+        model.outputs = []
+        model.inbound_nodes = []
+        model.outbound_nodes = []
+    else:
+        model.layers[-1].outbound_nodes = []
+        model.outputs = [model.layers[-1].output]
+    model.built = False
+
 batch_size = 32
 nb_classes = 10
 nb_epoch = 80
@@ -40,7 +59,6 @@ print(X_test.shape[0], 'test samples')
 Y_train = np_utils.to_categorical(y_train, nb_classes)
 Y_test = np_utils.to_categorical(y_test, nb_classes)
 
-
 if K.image_dim_ordering() == 'th':
     X_train = X_train.reshape(X_train.shape[0], 3, img_rows, img_cols)
     X_test = X_test.reshape(X_test.shape[0], 3, img_rows, img_cols)
@@ -50,18 +68,27 @@ else:
     X_test = X_test.reshape(X_test.shape[0], img_rows, img_cols, 3)
     input_shape = (img_rows, img_cols, 3)
 
+
 model = Sequential()
 model.add(AveragePooling2D(pool_size=(2,2), input_shape=input_shape))
 model.add(Convolution2D(32, 3, 3, border_mode='same'))
+model.add(BatchNormalization(epsilon=0.001, mode=0, axis=-1, momentum=0.99))
+
 model.add(Activation('relu'))
 model.add(Convolution2D(32, 3, 3))
+model.add(BatchNormalization(epsilon=0.001, mode=0, axis=-1, momentum=0.99))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.25))
 
 model.add(Convolution2D(64, 3, 3, border_mode='same'))
+model.add(BatchNormalization(epsilon=0.001, mode=0, axis=-1, momentum=0.99))
 model.add(Activation('relu'))
 model.add(Convolution2D(64, 3, 3))
+model.add(BatchNormalization(epsilon=0.001, mode=0, axis=-1, momentum=0.99))
+model.add(Activation('relu'))
+model.add(Convolution2D(128, 3, 3))
+model.add(BatchNormalization(epsilon=0.001, mode=0, axis=-1, momentum=0.99))
 model.add(Activation('relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Dropout(0.25))
@@ -73,9 +100,21 @@ model.add(Dropout(0.5))
 model.add(Dense(nb_classes))
 model.add(Activation('softmax'))
 
+#model.load_weights('one.h5', by_name=True)
+#pop_layer(model)
+#model.add(Dense(512))
+#model.add(Activation('relu'))
+#model.add(Dense(nb_classes)) 
+#model.add(Activation('softmax'))
+
+
+model.summary()
 # let's train the model using SGD + momentum (how original).
-sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-model.compile(loss='categorical_crossentropy', optimizer=sgd)
+#sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+adam = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+rmsprop = RMSprop(lr=0.001, rho=0.9, epsilon=1e-08, decay=0.0)
+#adagrad = Adagrad(lr=0.01, epsilon=1e-08, decay=0.0)
+model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
 
 X_train = X_train.astype('float32')
 X_test = X_test.astype('float32')
@@ -84,9 +123,28 @@ X_test /= 255
 
 if not data_augmentation:
     print('Not using data augmentation.')
-    model.fit(X_train, Y_train, batch_size=batch_size,
+    history = model.fit(X_train, Y_train, batch_size=batch_size,
               nb_epoch=nb_epoch, show_accuracy=True,
               validation_data=(X_test, Y_test), shuffle=True)
+    print(history.history.keys())
+    # summarize history for accuracy
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('Accuracy on Cifar10')
+    plt.ylabel('Accuracy %')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('CNN loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+    #Save the model weights
+    model.save_weights('one.h5')
 else:
     print('Using real-time data augmentation.')
 
@@ -113,16 +171,3 @@ else:
                         nb_epoch=nb_epoch, show_accuracy=True,
                         validation_data=(X_test, Y_test),
                         nb_worker=1)
-
-# serialize model to JSON
-model_json = model.to_json()
-with open("model.json", "w") as json_file:
-        json_file.write(model_json)
-        # serialize weights to HDF5
-        model.save_weights("cifar10.h5")
-        print("Saved model to disk")
-
-score = model.evaluate(X_test, Y_test, verbose=0)
-print('Test score:', score[0])
-print('Test accuracy:', score[1])
-
