@@ -8,7 +8,7 @@ class CrossEntropy(object):
  
     def forward(self, out, y):
 
-        loss = lambda x, y: -(y * np.log(x +.0001) + (1.01 - y) * np.log(1.01 - x))
+        loss = lambda x, y: -(y*np.log(x +.0001)) - ((1.01 - y) * np.log(1.01 - x))
 
         if out.ndim > 1:
             return np.mean(loss(out, y))
@@ -17,6 +17,5 @@ class CrossEntropy(object):
 
         
     def backward(self, out, y):
-
         return np.subtract(out, y)
 

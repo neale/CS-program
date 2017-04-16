@@ -28,15 +28,3 @@ mlp = MLPClassifier(hidden_layer_sizes=(10,1), batch_size=100, learning_rate='ad
 mlp.fit(train_x, train_y)
 print("Training set score: %f" % mlp.score(train_x, train_y))
 print("Test set score: %f" % mlp.score(test_x, test_y))
-"""
-fig, axes = plt.subplots(4, 4)
-# use global min / max to ensure all weights are shown on the same scale
-vmin, vmax = mlp.coefs_[0].min(), mlp.coefs_[0].max()
-for coef, ax in zip(mlp.coefs_[0].T, axes.ravel()):
-    ax.matshow(coef.reshape(28, 28), cmap=plt.cm.gray, vmin=.5 * vmin,
-               vmax=.5 * vmax)
-    ax.set_xticks(())
-    ax.set_yticks(())
-
-plt.show()
-"""

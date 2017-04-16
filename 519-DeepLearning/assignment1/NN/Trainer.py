@@ -1,8 +1,9 @@
 import numpy as np
+import collections
 
 class Trainer(object):
     
-    def __init__(self, X, Y, Xv, Yv, net, epochs=2, batch_size=100, lr=.1, m=.9):
+    def __init__(self, X, Y, Xv, Yv, net, epochs=2, batch_size=100, lr=1, m=.9):
         self.epochs     = epochs
         self.batch_size = batch_size
         self.lr         = lr
@@ -44,46 +45,51 @@ class Trainer(object):
         return x_batch, y_batch
 
     def train(self):
-        
+        np.set_printoptions(precision=4) 
+        ##DEBUG
         for E in xrange(self.epochs):
             
-            loss = 0.
-            np.random.shuffle(np.array(self.X))
-            np.random.shuffle(np.array(self.Y))
+            loss = 0
             print ("Epoch {}".format(E))
+            np.random.shuffle(self.X)
+            np.random.shuffle(self.Y)
             #shuffle arrays of data
+            #print ("BEGIN\n",self.network.hiddenLayer.W)
+            #print (self.network.outputLayer.W)
             for batch in xrange(self.nbatches):
+                self.batch = batch
                 self.network.initAcivations()
                 self.network.initGradients()
                 out  = np.zeros(self.batch_size)
                 x, y = self.get_minibatch()
-                print ("fetching minibatc of size", x.shape)
-                self.network.forward(x, y)
-                
-                loss = self.network.lossF
-                print('[Epoch {}, mb {}], lr: {}, Avg.Loss = {}'.format(
+                np.random.shuffle(x)
+                np.random.shuffle(y)
+                self.network.forward(x, y) 
+                loss += self.network.lossF
+                l = self.network.lossF
+                self.network.collect_gradients(y)
+                self.network.update_weights(x, self.lr)
+                print('[Epoch {}, mb {}], lr {}, Avg.Loss= {}, l={}'.format(
                   E + 1,
                   batch + 1,
                   self.lr,
-                  loss,
-                  ))
-                
-                self.network.collect_gradients(y)
-                self.network.update_weights(x)
-            
-            print (self.network.hiddenLayer.W)
-            
-            self.validate()
-
+                  float(loss)/(batch+1),
+                  l
+                ))
+            if E+1 in [2, 4, 6, 8]  :
+                self.lr /= 10.
+            v = self.validate()
+        return v         
 
     def validate(self):
         sum = 0.
-        count = np.count_nonzero(self.Y)
-        for i in range(len(self.X)):
-            prob     = self.network.forward(self.X[i])
-            pred     = self.network.classify(prob)
-            if pred == self.Y[i]:
+        count = np.count_nonzero(self.Yval)
+        for i in range(len(self.Xval)):
+            prob     = self.network.forward_single(self.Xval[i])
+            pred     = self.network.classify(prob[0])
+            if pred == self.Yval[i]:
                 sum += 1.
-        self.val_acc = sum/(len(self.X))
+        self.val_acc = sum/(len(self.Xval))
         print ("Validation Accuracy: {}%".format(self.val_acc*100.))
+        return (100-(self.val_acc*100))
 

@@ -1,18 +1,21 @@
+import sys
 import operator
 import numpy as np
 import matplotlib.pyplot as plt
 import itertools, functools
-
+import re
 """ Grid Layout
     grid[0][0] = num_states
     grid[0][1] = num_actions
 """
 def load_data():
 
-    with open('./rldata.csv', 'rb') as f:
+    path = sys.argv[1]
+    with open(path, 'rb') as f:
     #with open('./rl_testdata.csv', 'rb') as f:
         train = f.readlines()
         train = [line.strip('\n') for line in train]
+        train = [re.sub(r'[^\x00-\x7f]',r'', line) for line in train]
         train[0] = [int(a) for a in train[0].split(' ')]
         num_states, num_actions = train[0]
         lines = num_actions * num_states + num_actions

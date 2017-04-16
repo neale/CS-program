@@ -7,7 +7,7 @@ from Loss   import CrossEntropy
 
 class FullyConnected(object):
 
-    def __init__(self, input_dims, hidden_units):
+    def __init__(self, input_dims, hidden_units, batch_size):
         
         self.grad            = None
         self.outputs         = None
@@ -18,7 +18,7 @@ class FullyConnected(object):
         self.lossG           = 0.
         self.lr              = .1
         self.momentum        = 0.9
-        self.batch_size      = 100
+        self.batch_size      = batch_size
 
     def initLayers(self):
       
@@ -33,19 +33,19 @@ class FullyConnected(object):
     def initAcivations(self):
 
         self.startOfBatch       = True
-        self.hiddenActivations  = np.zeros((100, self.nOutput, self.nHidden))
-        self.reluActivations    = np.zeros((100, self.nOutput, self.nHidden))
-        self.outputActivations  = np.zeros((100, self.nOutput, self.nOutput))
-        self.sigmoidActivations = np.zeros((100, self.nOutput, self.nOutput))
-        self.outputs            = np.zeros((100, self.nOutput))
+        self.hiddenActivations  = np.zeros((self.batch_size, self.nOutput, self.nHidden))
+        self.reluActivations    = np.zeros((self.batch_size, self.nOutput, self.nHidden))
+        self.outputActivations  = np.zeros((self.batch_size, self.nOutput, self.nOutput))
+        self.sigmoidActivations = np.zeros((self.batch_size, self.nOutput, self.nOutput))
+        self.outputs            = np.zeros((self.batch_size, self.nOutput))
     
     def initGradients(self):
         self.startOfGrad = True
-        self.lossG       = np.zeros((100, self.nOutput, ))
-        self.gradSigmoid = np.zeros((100, self.nOutput, ))
-        self.gradOutput  = np.zeros((100, self.nHidden, ))
-        self.gradRelu    = np.zeros((100, self.nHidden, ))
-        self.gradHidden  = np.zeros((100, self.dInput, ))
+        self.lossG       = np.zeros((self.batch_size, 1, self.nOutput ))
+        self.gradSigmoid = np.zeros((self.batch_size, 1, self.nOutput ))
+        self.gradOutput  = np.zeros((self.batch_size, 1, self.nHidden ))
+        self.gradRelu    = np.zeros((self.batch_size, 1, self.nHidden ))
+        self.gradHidden  = np.zeros((self.batch_size, 1, self.dInput  ))
 
     def forward(self, x, y):
         
@@ -56,34 +56,36 @@ class FullyConnected(object):
             self.outputActivations[i] = self.outputLayer.forward(self.reluActivations[i].reshape(-1))
             self.sigmoidActivations[i] = self.sigmoidLayer.forward(self.outputActivations[i])
             self.outputs[i]            = self.sigmoidActivations[i]
-        print (i)
 
-        self.lossF = self.loss(self.sigmoidActivations[i], y[i])
+            self.loss(self.outputs[i], y[i])
 
     def loss(self, x, y):
 
-        self.lossF = self.lossLayer.forward(x, y)
+        self.lossF = np.mean(self.lossLayer.forward(x, y))
 
     def collect_gradients(self, y):
         
-        print (self.hiddenActivations.shape[98])
-        print (self.reluActivations.shape[99])
-        print (self.outputActivations[99])
-        print (self.sigmoidActivations[99])
         for i in range(len(y)):
             self.lossG[i]       = self.lossLayer.backward(self.outputs[i], y[i])
             self.gradSigmoid[i] = self.sigmoidLayer.backward(self.outputActivations[i], self.lossG[i])
             self.gradOutput[i]  = self.outputLayer.backward(self.gradSigmoid[i].reshape(-1))
-            self.gradRelu[i]    = self.reluLayer.backward(self.hiddenActivations[i].reshape(-1), self.gradOutput[i])
+            self.gradRelu[i]    = self.reluLayer.backward(self.hiddenActivations[i], self.gradOutput[i])
             self.gradHidden[i]  = self.hiddenLayer.backward(self.gradRelu[i].reshape(-1))
 
-    def update_weights(self, x):
-       
-        self.outputLayer.update(self.reluActivations.reshape(-1), self.gradSigmoid.reshape(-1), self.lr, self.momentum)
-        self.hiddenLayer.update(x.reshape(-1), self.gradRelu.reshape(-1), self.lr, self.momentum)
+    def update_weights(self, x, lr):
+        self.outputLayer.update(self.reluActivations, self.gradSigmoid, lr, self.momentum)
+        self.hiddenLayer.update(x, self.gradRelu, lr, self.momentum)
+
+    def forward_single(self, x):
+          input = np.array(x)
+          hidden = self.hiddenLayer.forward(input)
+          relu   = self.reluLayer.forward(hidden)
+          output = self.outputLayer.forward(relu.reshape(-1))
+          return self.sigmoidLayer.forward(output)
+
 
     def classify(self, prob):
-        if prob > .5: return 1
-        else        : return 0
+        if abs(prob) > .5: return 1
+        else             : return 0
         
  

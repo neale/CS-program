@@ -13,8 +13,6 @@ from Loss    import CrossEntropy
 from Layers  import ReLU, Linear, Sigmoid
 from Network import FullyConnected
 from Trainer import Trainer
-from sklearn.neural_network import MLPClassifier
-from sklearn import preprocessing
 import warnings 
 
 def load_data():
@@ -33,23 +31,19 @@ if __name__ == '__main__':
         test_y  = np.array(data['test_labels'])
         train_y = np.ravel(train_y)
         test_y  = np.ravel(test_y)
-        train_x = preprocessing.scale(train_x)
-        test_x  = preprocessing.scale(test_x)
-        
-        mlp = MLPClassifier(hidden_layer_sizes=(10,1), batch_size=100, max_iter=1, solver='sgd', verbose=True, learning_rate_init=.01)
-        mlp.fit(train_x, train_y)
-        print (mlp.score(test_x, test_y))
+        train_x = (train_x - np.mean(train_x, axis=0)) / np.std(train_x, axis=0)
+        test_x = (test_x - np.mean(test_x, axis=0)) / np.std(test_x, axis=0)
+
         num_examples, input_dims = train_x.shape
 
     scores = []
-    for n in [.01]:
-        nn = FullyConnected(3072, 10)
+    for h in [5, 10, 20, 50]:
+        batch = 100
+        nn = FullyConnected(3072, h, batch)
         nn.initLayers()
-        trainer = Trainer(train_x, train_y, test_x, test_y, nn, epochs=5, lr=n)
-        trainer.train() 
-        mlp.coefs_[0] = nn.hiddenLayer.W
-        mlp.coefs_[1] = nn.outputLayer.W
-        scores.append (mlp.score(test_x, test_y))
+        trainer = Trainer(train_x, train_y, test_x, test_y, nn, batch_size=batch, epochs=10, lr=0.1)
+        scores.append(trainer.train())
     print (scores)
+        
 
 

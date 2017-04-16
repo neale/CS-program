@@ -9,13 +9,13 @@ and the backward pass will accumulate gradients and update the weights"""
 class Linear(object):
 
     def __init__(self, mean, std, w, h):
-        self.i  = w
-        self.o  = h
-        self.W  = np.random.normal(0, std, (w, h))
+        self.i  = h
+        self.o  = w
+        self.W  = np.random.normal(0, .1, (w, h))
         self.b  = np.zeros(w)
         self.Dw = 0
         self.Db = 0
-        self.l2 = .01
+        self.l2 = .0001
     
     def set_params(self, W):
         self.W = W
@@ -28,32 +28,33 @@ class Linear(object):
         return np.dot(grad, self.W)
 
     def update(self, x, grad, lr, m, solver="MOMENTUM"):
-
         # here x is the whole minibatch, and grad is the whole gradient
         if solver is "MOMENTUM":
             deltaW = []
             deltaB = []
+            #print (x.shape, grad.shape)
             for i in xrange(len(x)):
-                print ("before ", x[i].shape, grad[i].shape)
-                print (x[i], gradt a)
-                g = np.tile(grad[i][...,None], (1, self.i))
+                #print ("before ","in:",x[i].shape,"out :",grad[i].shape)
+                g = np.tile(grad[i][...,None],(1, self.i))
                 k = np.tile(x[i], (self.o, 1))
-                print (g.shape, k.shape)
 
                 deltaW.append(g * k)
-                deltaB.append(np.dot(grad[i].reshape(-1), np.identity(self.o)))
-           
+                deltaB.append(np.dot(grad[i], np.identity(self.o)))
             deltaW = np.array(deltaW); deltaB = np.array(deltaB)
+            #print ("g: ",g.shape, "k: ",k.shape)
+            #print (deltaW.shape )
             if deltaB.ndim > 1:
                 deltaB = deltaB.flatten()
-            mean = np.mean(deltaW, axis=0) 
+            mean    = np.mean(deltaW, axis=0) 
             weight_decay = self.l2 * np.linalg.norm(self.W)
-            update = (m * self.Dw) - (lr * mean * weight_decay)
-            self.W = self.W.T + update
-            self.Dw = update
-            mean = np.mean(deltaB, axis=0) 
+            update  = (m * self.Dw) - (lr * mean)# * weight_decay)
+            scale = np.linalg.norm(self.W.ravel())
+            uscale = np.linalg.norm(update.ravel())
+            self.W += update[0]
+            self.Dw = update[0]
+            mean    = np.mean(deltaB, axis=0) 
             weight_decay = self.l2 * np.linalg.norm(self.b)
-            update = (m * self.Db) - (lr * mean * weight_decay)
+            update  = (m * self.Db) - (lr * mean)# * weight_decay)
             self.b += update
             self.Db = update
 
