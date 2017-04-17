@@ -4,13 +4,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools, functools
 import re
+import argparse
 """ Grid Layout
     grid[0][0] = num_states
     grid[0][1] = num_actions
 """
-def load_data():
+def load_args():
 
-    path = sys.argv[1]
+  parser = argparse.ArgumentParser(description='Description of your program')
+  parser.add_argument('-t', '--timesteps', default=0, help='horizon length, discarded if discount provided', required=False)
+  parser.add_argument('-g', '--gamma', default=0, help='discount factor', required=False)
+  parser.add_argument('-i', '--input_file', default='MDP1.txt', help='input file with MDP description', required=True)
+  parser.add_argument('-e', '--epsilon', default=0, help='epsilon, or early stopping conditions', required=False)
+  args = parser.parse_args()
+  return args
+
+def load_data(path):
+
     with open(path, 'rb') as f:
     #with open('./rl_testdata.csv', 'rb') as f:
         train = f.readlines()
@@ -32,16 +42,19 @@ def load_data():
 
 class MDP(object):
 
-    def __init__(self, grid, gamma, actions):
+    def __init__(self, args, grid, actions):
+        self.args = args
         self.grid = grid
-        self.gamma = gamma
+        self.gamma = float(args.gamma)
         self.num_states, self.num_actions = grid[0]
         self.actions = actions
         self.rewards = grid[-1]
         self.Utility = [x for x in self.rewards]
-        self.Path = [0]
         self.print_attrs()
-        self.delta = ((1*10**-10)*((1-self.gamma)**2))/(2*(self.gamma**2))
+        self.timesteps = int(args.timesteps)
+        if (args.epsilon is 0) and (self.gamma > 0):
+            self.epsilon = ((1*10**-10)*((1-self.gamma)**2))/(2*(self.gamma**2))
+        else: self.epsilon = float(args.epsilon)
 
     def print_attrs(self):
         print "number of states: {}\n".format(self.num_states)
@@ -78,19 +91,16 @@ class MDP(object):
         else:
             return self.gamma*max_p + self.Reward(state)
 
-    """ Q iterates through the algorithm until the utility update is less than delta
-        as the utility of each state is updated, the difference between the old and the
-        new utility functions can be taken, this is compared against the delta equation
+    """
+    Q iterates through the algorithm until the utility update is less than delta
+    as the utility of each state is updated, the difference between the old and the
+    new utility functions can be taken, this is compared against the delta equation
     """
     def Q(self) :
 
-        finite = 1
-
         max_state = 1
-        if finite == 0:
-            # fill in Utility for each
-            # for infinite horizon
-            while max_state > self.delta:
+        if self.timesteps == 0:
+            while max_state > self.epsilon:
                 max_state = 0
                 new_util = [0]*self.num_states
                 next_prob = []
@@ -102,9 +112,10 @@ class MDP(object):
                 self.Utility = new_util
 
         else:
+            print "searching on finite horizon"
             # for finite horizon
             utilities, policies = [], []
-            for it in range(10):
+            for it in range(self.timesteps):
                 for s in range(it):
                     new_util = [0]*self.num_states
                     next_prob = []
@@ -121,8 +132,9 @@ class MDP(object):
 
         return self.Utility
 
-    """ finds the best policy based on the current utility function
-        simply returns the best next state: next state with the highest utility
+    """
+    finds the best policy based on the current utility function
+    simply returns the best next state: next state with the highest utility
     """
     def policy(self):
         proto_policy = []
@@ -141,21 +153,23 @@ class MDP(object):
         return proto_policy
 
 if __name__ == '__main__':
-    gamma = 0.1
-    grid, actions = load_data()
-    mdp = MDP(grid, gamma, actions)
-    finite = True
-    if finite == False:
+    args = load_args()
+    grid, actions = load_data(args.input_file)
+    mdp = MDP(args, grid, actions)
+    if int(args.timesteps) > 0: finite = True
+    else: finite = False
+
+    if finite is False:
         Utility = mdp.Q()
         Policy = mdp.policy()
         U = ["%.5f" % v for v in Utility]
         P = ["%.5f" % v for v in Policy]
         print "**************************************\nEnd Policy: {}\nEnd Value function: {}\n**************************************".format(P, U)
     else:
+        print "***********************************"
         Utility, Policy = mdp.Q()
         for i in range(10):
             U = ["%.5f" % v for v in Utility[i]]
             P = ["%.5f" % v for v in Policy[i]]
-            print "***********************************"
             print "Utility for state {} : {}".format(i, U)
-            print "Policy for state {}  : {}\n**************************************".format(i, P)
+            print "Policy for state {}  : {}\n".format(i, P)

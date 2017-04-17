@@ -38,7 +38,7 @@ def load_data(path):
         for i in range(num_actions):
             actions.append(grid[(i*num_states):((1+i)*num_states)])
         train = np.array(train)
-    return train, actions 
+    return train, actions
 
 class MDP(object):
 
@@ -65,11 +65,11 @@ class MDP(object):
     def Reward(self, state):
         return self.rewards[state]
 
-    # returns probability of going to state X from state Y 
+    # returns probability of going to state X from state Y
     def T(self, state, action, next_state):
         return self.actions[action][state][next_state]
 
-    """ 
+    """
     Value Iteration algorithm:
     U1(state) = Reward(state)
     Ui+1(state) = Reward(state) = gamma*max(for all next states (T(state, action, next_state)(U(i))))
@@ -90,7 +90,7 @@ class MDP(object):
                 max_p = sum_p
         return self.gamma*max_p + self.Reward(state)
 
-    """ 
+    """
     Q iterates through the algorithm until the utility update is less than delta
     as the utility of each state is updated, the difference between the old and the
     new utility functions can be taken, this is compared against the delta equation
