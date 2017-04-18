@@ -49,6 +49,9 @@ class MDP(object):
         self.num_states, self.num_actions = grid[0]
         self.actions = actions
         self.rewards = grid[-1]
+        if type(self.rewards) is str:
+            self.rewards = self.rewards.split(' ')
+            self.rewards = map(float, self.rewards)
         self.Utility = [x for x in self.rewards]
         self.print_attrs()
         self.timesteps = int(args.timesteps)
@@ -66,6 +69,9 @@ class MDP(object):
 
     def T(self, state, action, next_state):
         """ returns probability of going to state X from state Y """
+        print len(self.actions), len(self.actions[0]), len(self.actions[0][0])
+        print state, action, next_state
+        print self.actions[action][state]
         return self.actions[action][state][next_state]
 
     """ Value Iteration algorithm:
@@ -168,8 +174,11 @@ if __name__ == '__main__':
     else:
         print "***********************************"
         Utility, Policy = mdp.Q()
-        for i in range(10):
+        for i in range(int(args.timesteps)):
             U = ["%.5f" % v for v in Utility[i]]
+            print U
+        for i in range(int(args.timesteps)):
             P = ["%.5f" % v for v in Policy[i]]
-            print "Utility for state {} : {}".format(i, U)
-            print "Policy for state {}  : {}\n".format(i, P)
+            print P
+            #print "Utility for state {} : {}".format(i, U)
+            #print "Policy for state {}  : {}\n".format(i, P)
