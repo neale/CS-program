@@ -43,31 +43,6 @@ def load_data(path):
         train = np.array(train)
     return train, actions
 
-def load_drive_args(args):
-
-    spaces = args.spaces
-    actions = [0, 1, 2] #park, drive, exit
-
-    # state space is a bunch of tuples that we move between
-    
-    state_space = [
-               (0, True, False),  (0, False, False),  (1, True, False),  (1, False, False), 
-               (2, True, False),  (2, False, False),  (3, True, False),  (3, False, False), 
-               (4, True, False),  (4, False, False),  (5, True, False),  (5, False, False),  
-               (6, True, False),  (6, False, False),  (7, True, False),  (7, False, False), 
-               (8, True, False),  (8, False, False),  (9, True, False),  (9, False, False), 
-               (10, True, False), (10, False, False), (11, True, False), (11, False, False), 
-               (12, True, False), (12, False, False), (13, True, False), (13, False, False), 
-               (14, True, False), (14, False, False), (15, True, False), (15, False, False)
-            ]
-    
-    # create parking spot holes in the state space
-    spaces = [
-
-    reward = [-1, -1, -1, -1, -1, -1, -1, -1,
-           -1, -1, -1, -1, -1, -1, -1, -1 ]
-
-
 
 class MDP(object):
 
@@ -96,12 +71,6 @@ class MDP(object):
         print "rewards: {}\n".format(self.rewards)
 
     def Reward(self, state, action=None):
-        if self.driving:
-            if action == 0 : #drive
-                return -1
-            elif action == 1: #park
-                return self.lotreward[state]
-            elif action == 2: #exit
         return self.rewards[state]
 
     def T(self, state, action, next_state):
@@ -197,25 +166,7 @@ class MDP(object):
         for state in range(self.num_states):
             proto_policy.append(argmax(state))
         return proto_policy
-
-    """ A[1] B[1]
-        A[2] B[2]
-        ........
-        A[n] B[n]
-
-        Circular states where driving is done in a ring. A2 -> A1 -> B1 -> B2 -> .. -> Bn -> An -> .. -> A2
-    """
-    def drive(self):
-
-        row_spaces = self.rowlen * 2
-        if self.position != self.rowlen*2:
-            self.position = self.position+1
-        else:
-            self.position = 0
-
-
-
-
+    
     if __name__ == '__main__':
       args = load_args()
       grid, actions = load_data(args.input_file)
