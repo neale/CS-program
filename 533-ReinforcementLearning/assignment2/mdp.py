@@ -17,13 +17,15 @@ def load_args():
   parser.add_argument('-f', '--input_file', default='MDP1.txt', help='input file with MDP description', required=True)
   parser.add_argument('-e', '--epsilon', default=0, help='epsilon, or early stopping conditions', required=False)
   parser.add_argument('-i', '--intermediate', default=False, type=bool,  help='print out intermeiate policies/value functions while it learns', required=False)
+  parser.add_argument('-d', '--drive', default=False, type=bool, help='use the parking lot planner')
+  parser.add_argument('-s', '--spaces', default=8, type=int, help='number of space in the two rows of the parking lot')
+
   args = parser.parse_args()
   return args
 
 def load_data(path):
 
     with open(path, 'rb') as f:
-    #with open('./rl_testdata.csv', 'rb') as f:
         train = f.readlines()
         train = [line.strip('\n') for line in train]
         train = [re.sub(r'[^\x00-\x7f]',r'', line) for line in train]
@@ -40,6 +42,32 @@ def load_data(path):
             actions.append(grid[(i*num_states):((1+i)*num_states)])
         train = np.array(train)
     return train, actions
+
+def load_drive_args(args):
+
+    spaces = args.spaces
+    actions = [0, 1, 2] #park, drive, exit
+
+    # state space is a bunch of tuples that we move between
+    
+    state_space = [
+               (0, True, False),  (0, False, False),  (1, True, False),  (1, False, False), 
+               (2, True, False),  (2, False, False),  (3, True, False),  (3, False, False), 
+               (4, True, False),  (4, False, False),  (5, True, False),  (5, False, False),  
+               (6, True, False),  (6, False, False),  (7, True, False),  (7, False, False), 
+               (8, True, False),  (8, False, False),  (9, True, False),  (9, False, False), 
+               (10, True, False), (10, False, False), (11, True, False), (11, False, False), 
+               (12, True, False), (12, False, False), (13, True, False), (13, False, False), 
+               (14, True, False), (14, False, False), (15, True, False), (15, False, False)
+            ]
+    
+    # create parking spot holes in the state space
+    spaces = [
+
+    reward = [-1, -1, -1, -1, -1, -1, -1, -1,
+           -1, -1, -1, -1, -1, -1, -1, -1 ]
+
+
 
 class MDP(object):
 
@@ -62,10 +90,18 @@ class MDP(object):
 
     def print_attrs(self):
         print "number of states: {}\n".format(self.num_states)
-        print "number of possible actions: {}\n".format(self.num_actions)
-        print "rewards per state: {}\n".format(self.rewards)
+        print "number of possible actions: {}".format(self.num_actions)
+        print "actions: {}\n".format(self.actions)
+        print "rewards per state: {}".format(self.rewards)
+        print "rewards: {}\n".format(self.rewards)
 
-    def Reward(self, state):
+    def Reward(self, state, action=None):
+        if self.driving:
+            if action == 0 : #drive
+                return -1
+            elif action == 1: #park
+                return self.lotreward[state]
+            elif action == 2: #exit
         return self.rewards[state]
 
     def T(self, state, action, next_state):
@@ -104,6 +140,7 @@ class MDP(object):
 
         max_state = 1
         if self.timesteps == 0:
+            print "searching infinite horizon"
             while max_state > self.epsilon:
                 max_state = 0
                 new_util = [0]*self.num_states
@@ -161,32 +198,50 @@ class MDP(object):
             proto_policy.append(argmax(state))
         return proto_policy
 
-if __name__ == '__main__':
-    args = load_args()
-    grid, actions = load_data(args.input_file)
-    mdp = MDP(args, grid, actions)
-    if int(args.timesteps) > 0: finite = True
-    else: finite = False
+    """ A[1] B[1]
+        A[2] B[2]
+        ........
+        A[n] B[n]
 
-    if finite is False:
-        Utility = mdp.Q()
-        Policy = mdp.policy()
-        U = ["%.5f" % v for v in Utility]
-        P = ["%.5f" % v for v in Policy]
-        print "**************************************\nEnd Policy: {}\nEnd Value function: {}\n**************************************".format(P, U)
-    else:
-        print "***********************************"
-        Utility, Policy = mdp.Q()
-        if args.intermediate:
-            for i in range(int(args.timesteps)):
-                U = ["%.5f" % v for v in Utility[i]]
-                print U
-            for i in range(int(args.timesteps)):
-                P = ["%.5f" % v for v in Policy[i]]
-                print P
+        Circular states where driving is done in a ring. A2 -> A1 -> B1 -> B2 -> .. -> Bn -> An -> .. -> A2
+    """
+    def drive(self):
+
+        row_spaces = self.rowlen * 2
+        if self.position != self.rowlen*2:
+            self.position = self.position+1
         else:
-            U = ["%.5f" % v for v in Utility]
-            P = ["%.5f" % v for v in Policy]
-            print "Finite Utility : {}".format(U)
-            print "Finite Policy  : {}\n".format(P)
-            
+            self.position = 0
+
+
+
+
+    if __name__ == '__main__':
+      args = load_args()
+      grid, actions = load_data(args.input_file)
+      mdp = MDP(args, grid, actions)
+      if int(args.timesteps) > 0: finite = True
+      else: finite = False
+
+      if finite is False:
+          Utility = mdp.Q()
+          Policy = mdp.policy()
+          U = ["%.5f" % v for v in Utility]
+          P = ["%.5f" % v for v in Policy]
+          print "**************************************\nPolicy: {}\nValue : {}\n**************************************".format(P, U)
+      else:
+          print "***********************************"
+          Utility, Policy = mdp.Q()
+          if args.intermediate:
+              for i in range(int(args.timesteps)):
+                  U = ["%.5f" % v for v in Utility[i]]
+                  print U
+              for i in range(int(args.timesteps)):
+                  P = ["%.5f" % v for v in Policy[i]]
+                  print P
+          else:
+              U = ["%.5f" % v for v in Utility]
+              P = ["%.5f" % v for v in Policy]
+              print "Finite Utility : {}".format(U)
+              print "Finite Policy  : {}\n".format(P)
+              
