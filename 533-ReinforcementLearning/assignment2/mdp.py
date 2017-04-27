@@ -22,6 +22,7 @@ def load_args():
   parser.add_argument('-s', '--spaces', default=8, type=int, help='number of spaces in each row of the parking lot')
   parser.add_argument('-c', '--rcrash', default=-10, type=int, help='penalty on crashing into another car')
   parser.add_argument('-d', '--rdisabled', default=-5, type=int, help='penalty on parking in a handicapped spot')
+  parser.add_argument('-r', '--run_trial', default=False, type=bool, help='try policy with a given starting position')
 
 
   args = parser.parse_args()
@@ -196,6 +197,29 @@ class MDP(object):
             proto_policy.append(argmax(state))
         return proto_policy
 
+    def run_trial(self, U, P, start):
+
+        state = start
+        reward = 0
+        i = 0
+        for action in P:
+            print "STEP {}".format(i)
+            if int(float(action)) == 0: #park
+                reward += self.rewards[state]
+                print "TAKING EXIT\n\nReward of {}\n\nDONE".format(reward)
+                return
+            if int(float(action)) == 1:
+                print "EXITING\n\nReward of {}\n\nDONE".format(reward)
+                return
+            if int(float(action)) == 2:
+                reward -= 1
+                if state < 40:
+                    state += 3
+                else:
+                    state = 0
+                i += 1
+
+
 if __name__ == '__main__':
     args = load_args()
     if args.build == True:
@@ -213,6 +237,10 @@ if __name__ == '__main__':
       U = ["%.5f" % v for v in Utility]
       P = ["%.5f" % v for v in Policy]
       print "**************************************\nPolicy: {}\nValue : {}\n**************************************".format(P, U)
+      if args.run_trial:
+          start = 1
+          print "\n\nRUNNING POLICY STARTING AT STATE {}".format(start)
+          mdp.run_trial(U, P, start)
     else:
       print "***********************************"
       Utility, Policy = mdp.Q()
