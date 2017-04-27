@@ -20,6 +20,8 @@ def load_args():
   parser.add_argument('-i', '--intermediate', default=False, type=bool,  help='print out intermeiate policies/value functions while it learns', required=False)
   parser.add_argument('-b', '--build', default=False, type=bool, help='use the parking lot planner')
   parser.add_argument('-s', '--spaces', default=8, type=int, help='number of spaces in each row of the parking lot')
+  parser.add_argument('-c', '--rcrash', default=-10, type=int, help='penalty on crashing into another car')
+  parser.add_argument('-d', '--rdisabled', default=-5, type=int, help='penalty on parking in a handicapped spot')
 
 
   args = parser.parse_args()
@@ -69,7 +71,7 @@ def load_data(path):
 
 def build_mdp(args):
 
-    builder = Builder(args.spaces, 0, './parking.txt')
+    builder = Builder(args.spaces, 0, args.rcrash, args.rdisabled, './parking.txt')
     builder.build()
 
 class MDP(object):

@@ -4,12 +4,14 @@ import numpy as np
 
 class Builder(object):
 
-    def __init__(self, n, spots_taken, path):
+    def __init__(self, n, spots_taken, crash, handicapped, path):
 
         self.n = n #spots in each row
         self.filled = spots_taken #percentage of spots taken
-        self.path = path
         self.actions = 3
+        self.path = path
+        self.crash = crash
+        self.handicapped = handicapped
 
     """
      O = T/F     ; whether the spot is taken or not
@@ -97,11 +99,11 @@ class Builder(object):
             # everything gets a default of -1 for driving
             reward = [-1]*(self.n*8)
             # every third state tuple is ( _ T T ) -> crash -10
-            reward = [-10 if i in range(2, self.n*8)[::4] else s for i, s in enumerate(reward)]
+            reward = [self.crash if i in range(2, self.n*8)[::4] else s for i, s in enumerate(reward)]
             # scale positive reward by distance (x, F, T)
             for sx, rx in enumerate(range(1, n*8)[::4]):
                 if (sx == 0) or (sx == self.n):
-                    reward[rx] = 1
+                    reward[rx] = self.handicapped
                 elif rx < 40: # still on row B - states 0 - 4n
                     reward[rx] = self.n - sx
                 else: # on row A - states 4n - 8n
