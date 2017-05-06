@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import itertools, functools
 import re
 import argparse
+from mdp_builder import Builder
+from simulator import Simulator
 """ Grid Layout
     grid[0][0] = num_states
     grid[0][1] = num_actions
@@ -14,32 +16,50 @@ def load_args():
   parser = argparse.ArgumentParser(description='Description of your program')
   parser.add_argument('-t', '--timesteps', default=0, help='horizon length, discarded if discount provided', required=False)
   parser.add_argument('-g', '--gamma', default=0, help='discount factor', required=False)
-  parser.add_argument('-f', '--input_file', default='MDP1.txt', help='input file with MDP description', required=True)
+  parser.add_argument('-f', '--input_file', default='MDP1.txt', help='input file with MDP description')
   parser.add_argument('-e', '--epsilon', default=0, help='epsilon, or early stopping conditions', required=False)
   parser.add_argument('-i', '--intermediate', default=False, type=bool,  help='print out intermeiate policies/value functions while it learns', required=False)
+  parser.add_argument('-b', '--build', default=False, type=bool, help='use the parking lot planner')
+  parser.add_argument('-s', '--spaces', default=8, type=int, help='number of spaces in each row of the parking lot')
+  parser.add_argument('-c', '--rcrash', default=-10, type=int, help='penalty on crashing into another car')
+  parser.add_argument('-d', '--rdisabled', default=-5, type=int, help='penalty on parking in a handicapped spot')
+  parser.add_argument('-r', '--run_trial', default=False, type=bool, help='try policy with a given starting position')
+
+
   args = parser.parse_args()
   return args
 
 def load_data(path):
 
     with open(path, 'rb') as f:
-    #with open('./rl_testdata.csv', 'rb') as f:
+
         train = f.readlines()
         train = [line.strip('\n') for line in train]
         train = [re.sub(r'[^\x00-\x7f]',r'', line) for line in train]
         train[0] = [int(a) for a in train[0].split(' ')]
         num_states, num_actions = train[0]
+        print num_states, num_actions
         lines = num_actions * num_states + num_actions
         grid = []
+
         for i in range(1, lines+(num_actions-1)):
-            if (i-1) % (num_states+1) is not 0:
-                grid.append([float(n) for n in train[i].split(' ')[::4]])
-                train[i] = [float(n) for n in train[i].split(' ')[::4]]
+            if ((i-1) % (num_states+1) is not 0) and (len(train)-1 >= i):
+                if train[i] == "":
+                    pass
+                else:
+                    grid.append([float(n) for n in train[i].split(' ')])#[::4]])
+                    train[i] = [float(n) for n in train[i].split(' ')]#[::4]]
+
         actions = []
         for i in range(num_actions):
             actions.append(grid[(i*num_states):((1+i)*num_states)])
         train = np.array(train)
     return train, actions
+
+def build_mdp(args):
+
+    builder = Builder(args.spaces, 0, args.rcrash, args.rdisabled, './parking.txt')
+    builder.build()
 
 class MDP(object):
 
@@ -62,18 +82,17 @@ class MDP(object):
 
     def print_attrs(self):
         print "number of states: {}\n".format(self.num_states)
-        print "number of possible actions: {}\n".format(self.num_actions)
-        print "rewards per state: {}\n".format(self.rewards)
+        print "number of possible actions: {}".format(self.num_actions)
+        print "rewards per state: {}".format(self.rewards)
 
-    def Reward(self, state):
+    def Reward(self, state, action=None):
         return self.rewards[state]
 
     def T(self, state, action, next_state=None):
-        if next_state == None:
-            # returns the whole probability array
-            return self.actions[action][state]
 
-        # returns probability of going to state X from state Y
+        if next_state == None:
+            return self.actions[action][state]
+        # returns probability of going to state X from state Y """
         return self.actions[action][state][next_state]
 
     """ Value Iteration algorithm:
@@ -108,6 +127,7 @@ class MDP(object):
 
         max_state = 1
         if self.timesteps == 0:
+            print "searching infinite horizon"
             while max_state > self.epsilon:
                 max_state = 0
                 new_util = [0]*self.num_states
@@ -165,32 +185,98 @@ class MDP(object):
             proto_policy.append(argmax(state))
         return proto_policy
 
+    def run_trial(self, U, P, start):
+
+        state = start
+        reward = 0
+        i = 0
+        for action in P:
+            print "STEP {}".format(i)
+            if int(float(action)) == 0: #park
+                reward += self.rewards[state]
+                print "TAKING EXIT\n\nReward of {}\n\nDONE".format(reward)
+                return
+            if int(float(action)) == 1:
+                print "EXITING\n\nReward of {}\n\nDONE".format(reward)
+                return
+            if int(float(action)) == 2:
+                reward -= 1
+                if state < 40:
+                    state += 3
+                else:
+                    state = 0
+                i += 1
+
+
+def simulate_policy(sim, policy, it, random=False):
+
+    total_reward = []
+    actions = [0, 2]
+    if random == True:
+        for i in range(it):
+            print i
+            reward = 0
+            while not sim._isterminal:
+                action = actions[np.random.randint(0, 2)]
+                print "action: ", action
+                print "state", sim.state, "  spot : ", sim.space, "with reward at state of ", sim.mdp.rewards[sim.state]
+                reward += sim.action(action)
+                print "reward: ", reward
+            total_reward.append(reward)
+            sim.reset()
+    else:
+
+        for _ in range(it):
+            reward = 0
+            while not sim._isterminal:
+                print "chooseing action {}".format(policy[sim.space])
+                reward += sim.action(policy[sim.space])
+                sim.draw_space(reward)
+            total_reward.append(reward)
+            sim.reset()
+
+    print total_reward
+    mean_reward = np.mean(total_reward)
+    print "mean reward over {} trials: {}".format(it, mean_reward)
+
+    return mean_reward
+
 if __name__ == '__main__':
     args = load_args()
+    if args.build == True:
+      build_mdp(args)
+      sys.exit(0)
+
     grid, actions = load_data(args.input_file)
     mdp = MDP(args, grid, actions)
+    sim = Simulator(mdp)
+
     if int(args.timesteps) > 0: finite = True
     else: finite = False
 
     if finite is False:
-        Utility = mdp.Q()
-        Policy = mdp.policy()
-        U = ["%.5f" % v for v in Utility]
-        P = ["%.5f" % v for v in Policy]
-        print "**************************************\nEnd Policy: {}\nEnd Value function: {}\n**************************************".format(P, U)
+      Utility = mdp.Q()
+      Policy = mdp.policy()
+      U = ["%.5f" % v for v in Utility]
+      P = ["%.5f" % v for v in Policy]
+      print "**************************************\nPolicy: {}\nValue : {}\n**************************************".format(P, U)
+      if args.run_trial:
+          policy = [int(float(p)) for p in P]
+
+          simulate_policy(sim, policy, 10, random=False )
     else:
-        print "***********************************"
-        Utility, Policy = mdp.Q()
-        if args.intermediate:
-            for i in range(int(args.timesteps)):
-                U = ["%.5f" % v for v in Utility[i]]
-                print U
-            for i in range(int(args.timesteps)):
-                P = ["%.5f" % v for v in Policy[i]]
-                print P
-        else:
-            U = ["%.5f" % v for v in Utility]
-            P = ["%.5f" % v for v in Policy]
-            print "Finite Utility : {}".format(U)
-            print "Finite Policy  : {}\n".format(P)
+      print "***********************************"
+      Utility, Policy = mdp.Q()
+      if args.intermediate:
+          for i in range(int(args.timesteps)):
+              U = ["%.5f" % v for v in Utility[i]]
+              print U
+          for i in range(int(args.timesteps)):
+              P = ["%.5f" % v for v in Policy[i]]
+              print P
+      else:
+          U = ["%.5f" % v for v in Utility]
+          P = ["%.5f" % v for v in Policy]
+          print "Finite Utility : {}".format(U)
+          print "Finite Policy  : {}\n".format(P)
 
