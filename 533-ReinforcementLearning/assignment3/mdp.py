@@ -17,13 +17,15 @@ def load_args():
   parser.add_argument('-t', '--timesteps', default=0, help='horizon length, discarded if discount provided', required=False)
   parser.add_argument('-g', '--gamma', default=0, help='discount factor', required=False)
   parser.add_argument('-f', '--input_file', default='MDP1.txt', help='input file with MDP description')
-  parser.add_argument('-e', '--epsilon', default=0, help='epsilon, or early stopping conditions', required=False)
+  parser.add_argument('-e', '--epsilon', default=0.9, type=float, help='epsilon, or early stopping conditions', required=False)
   parser.add_argument('-i', '--intermediate', default=False, type=bool,  help='print out intermeiate policies/value functions while it learns', required=False)
   parser.add_argument('-b', '--build', default=False, type=bool, help='use the parking lot planner')
   parser.add_argument('-s', '--spaces', default=8, type=int, help='number of spaces in each row of the parking lot')
   parser.add_argument('-c', '--rcrash', default=-10, type=int, help='penalty on crashing into another car')
   parser.add_argument('-d', '--rdisabled', default=-5, type=int, help='penalty on parking in a handicapped spot')
   parser.add_argument('-r', '--run_trial', default=False, type=bool, help='try policy with a given starting position')
+  parser.add_argument('-q', '--q_learner', default=False, type=bool, help='run Q learning algorithm')
+
 
 
   args = parser.parse_args()
@@ -58,7 +60,7 @@ def load_data(path):
 
 def build_mdp(args):
 
-    builder = Builder(args.spaces, 0, args.rcrash, args.rdisabled, './parking.txt')
+    builder = Builder(args.spaces, 0, args.rcrash, args.rdisabled, './careless.txt')
     builder.build()
 
 class MDP(object):
@@ -67,6 +69,7 @@ class MDP(object):
         self.args = args
         self.grid = grid
         self.gamma = float(args.gamma)
+        self.epsilon = 1 - self.gamma
         self.num_states, self.num_actions = grid[0]
         self.actions = actions
         self.rewards = grid[-1]
@@ -185,34 +188,83 @@ class MDP(object):
             proto_policy.append(argmax(state))
         return proto_policy
 
-    def run_trial(self, U, P, start):
 
-        state = start
-        reward = 0
-        i = 0
-        for action in P:
-            print "STEP {}".format(i)
-            if int(float(action)) == 0: #park
-                reward += self.rewards[state]
-                print "TAKING EXIT\n\nReward of {}\n\nDONE".format(reward)
-                return
-            if int(float(action)) == 1:
-                print "EXITING\n\nReward of {}\n\nDONE".format(reward)
-                return
-            if int(float(action)) == 2:
-                reward -= 1
-                if state < 40:
-                    state += 3
-                else:
-                    state = 0
-                i += 1
+def RL(sim, mdp, explore=0.5, q_iterations=20000):
+
+    reward = 0
+    timesteps = 0
+    mean_rewards = []
+    qtable = np.zeros((mdp.num_states, mdp.num_actions))
+    lr = 0.5
+    total_reward = 0
+    util = mdp.Q()
+    policy = mdp.policy()
+
+    for it in range(q_iterations):
+        timesteps += 1
+        trajectory = []
+        rewards = []
+	actions = []
+        trajectory.append(sim.state)
+        rewards.append(mdp.rewards[sim.state])
+        sim.reset()
+        while not sim._isterminal and timesteps < 500:
+
+            trajectory.append(sim.state)
+            rewards.append(int(mdp.rewards[sim.state]))
+
+            if np.random.uniform() < explore:
+                a = int(np.random.choice(mdp.num_actions, 1))
+            else:
+                a = np.argmax(qtable[sim.state])
+            a = int(a)
+	    actions.append(a)
+            sim.action(a)
+            timesteps += 1
+
+        trajectory.append(sim.state)
+        rewards.append(int(mdp.rewards[sim.state]))
+
+        # update Q table
+        for i in reversed(range(len(actions))):
+            state = trajectory[i]
+            action = actions[i]
+            new_state = trajectory[i+1]
+            reward = rewards[i]
+            n_actions = qtable.shape[1]
+            value = qtable[state, action]
+            rollout = np.max([qtable[new_state, x] for x in range(n_actions)])
+            new_value = reward + mdp.gamma * rollout
+            update = (new_value - value) * lr
+
+            qtable[state, action] = value+update
+
+    #print qtable
+    #sys.exit(0)
+    total_reward = []
+    for jt in range(q_iterations/10):
+	#print jt
+	reward = 0
+	trajectory = []
+	actions = []
+	timesteps = 0
+	sim.reset()
+	while not sim._isterminal and timesteps < 500:
+	    state = sim.state
+	    reward += sim.action(np.argmax(qtable[state]))
+	    timesteps += 1
+
+    	total_reward.append(reward)
+    	mean_rewards.append( np.mean(total_reward) )
+
+    print "Mean Reward for Q learner: {}".format(np.mean(mean_rewards))
 
 
-def simulate_policy(sim, policy, it, random=False):
+def simulate_policy(sim, mdp, policy, it, task="random"):
 
     total_reward = []
     actions = [0, 2]
-    if random == True:
+    if task == "random":
         for i in range(it):
             print i
             reward = 0
@@ -224,16 +276,39 @@ def simulate_policy(sim, policy, it, random=False):
                 print "reward: ", reward
             total_reward.append(reward)
             sim.reset()
-    else:
 
+    if task == "toy1":
         for _ in range(it):
             reward = 0
             while not sim._isterminal:
+                iscar = sim.check_car()
+                if iscar:
+                    print "acting 0 - drive"
+                    reward += sim.action(0)
+                else:
+                    print mdp.rewards[mdp.num_states/2+9]
+                    if (np.random.choice(2, 1, [.4, .6]) == 0) and mdp.rewards[sim.state+1] < mdp.rewards[mdp.num_states/2+9]:
+                        print "acting 0 - drive"
+                        reward += sim.action(0)
+                    else:
+                        print "acting 2 - park"
+                        reward += sim.action(2, env="toy")
+            total_reward.append(reward)
+            sim.reset()
+
+    else:
+        for _ in range(it):
+            reward = 0
+            a = []
+            while not sim._isterminal:
                 print "chooseing action {}".format(policy[sim.space])
+                a.append(policy[sim.space])
                 reward += sim.action(policy[sim.space])
                 sim.draw_space(reward)
             total_reward.append(reward)
-            sim.reset()
+            sim = Simulator(mdp)
+
+        print "trejectory: ", a
 
     print total_reward
     mean_reward = np.mean(total_reward)
@@ -254,6 +329,9 @@ if __name__ == '__main__':
     if int(args.timesteps) > 0: finite = True
     else: finite = False
 
+    if args.q_learner:
+	RL(sim, mdp)
+
     if finite is False:
       Utility = mdp.Q()
       Policy = mdp.policy()
@@ -263,7 +341,7 @@ if __name__ == '__main__':
       if args.run_trial:
           policy = [int(float(p)) for p in P]
 
-          simulate_policy(sim, policy, 10, random=False )
+          simulate_policy(sim, mdp, policy, 1000, task='toy1' )
     else:
       print "***********************************"
       Utility, Policy = mdp.Q()

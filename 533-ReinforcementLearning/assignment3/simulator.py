@@ -28,7 +28,13 @@ class Simulator(object):
         self.state = self.starting_state
         self.space = self.state / 4 + 1
 
-    def action(self, action):
+    def action(self, action, env=None):
+
+        # do a toy park
+        if env == "toy":
+            self.state += 1
+            self._isterminal = True
+            return self.mdp.rewards[self.state]
 
         if not self.is_terminal() or self._isterminal == True:
 
@@ -36,7 +42,7 @@ class Simulator(object):
             observations = self.mdp.T(self.state, action)
             if action == 0 or action == 2:
                 # draw a probability from 0.0 - 1.0,
-                print observations
+                #print observations
 
 
                 p = np.random.choice(self.mdp.num_states, 1, replace=False, p=observations)
@@ -54,7 +60,6 @@ class Simulator(object):
                     self._isterminal = True
 
             else:
-                print "EXITING"
                 self._isterminal = True
                 return 0
 
@@ -68,6 +73,16 @@ class Simulator(object):
         self.space = self.state / 4
         self.timestep = 0
         self._isterminal = False
+
+    def check_car(self):
+
+        observations = self.mdp.T(self.state, 2)
+        p = np.random.choice(self.mdp.num_states, 1, replace=False, p=observations)
+
+        if float(self.mdp.rewards[int(p)]) <= 0:
+            return True
+        else:
+            return False
 
     def is_terminal(self):
 

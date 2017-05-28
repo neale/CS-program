@@ -108,10 +108,14 @@ class Builder(object):
             for sx, rx in enumerate(range(1, n*8)[::4]):
                 if (sx == 0) or (sx == self.n):
                     reward[rx] = self.handicapped
+
+                # FOR ULTRAMARATHONER
+                elif (sx == self.n-1) or (sx == (self.n*2)-1):
+                    reward[rx] = 500
                 elif rx < 40: # still on row B - states 0 - 4n
-                    reward[rx] = self.n - sx
+                    reward[rx] = (self.n - sx) * 5
                 else: # on row A - states 4n - 8n
-                    reward[rx] = self.n - (sx-self.n)
+                    reward[rx] = (self.n - (sx-self.n)) * 5
             # out of the four varients of a state : we want -1, +, -10, -1 reward
             writer.writerow(reward)
 
