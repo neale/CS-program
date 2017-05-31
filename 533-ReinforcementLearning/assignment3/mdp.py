@@ -220,6 +220,7 @@ def RL(sim, mdp, explore=0.5, q_iterations=20000):
             a = int(a)
 	    actions.append(a)
             sim.action(a)
+            sim.draw_space(rewards[-1])
             timesteps += 1
 
         trajectory.append(sim.state)
