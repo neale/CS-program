@@ -37,7 +37,7 @@ def run_algo_bandit(algo, bandit):
     return obj
 
 # E[Reg] = n x R* - Sum(E[r])
-def test(algo, bandit="ALL", trials=5):
+def test(algo, bandit="ALL", trials=3):
 
     arms1, r1 = b1()
     arms2, r2 = b2()

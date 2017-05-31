@@ -20,10 +20,12 @@ class Bandit(object):
         r    = self.rewards[arm][0]
         prob = self.rewards[arm][1]
         choice = sum(np.random.binomial(1, prob, 1))
+        
         if int(choice) == 1:
-            return r
+            reward = r
         else:
-            return 0.
+            reward = 0
+        return reward
 
     def pull_expected(self, arm):
 
