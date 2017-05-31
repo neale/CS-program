@@ -25,16 +25,16 @@ class BanditMethods(object):
     def update(self, arm):
 
         reward = self.bandit.reward(arm)
-        self.c_reward.append(reward)
         self.total_reward += reward
         self.totals[arm] += reward
         self.mean_reward[arm] = np.divide(self.totals[arm], self.total_pulls)
         self.n_pulls[arm] += 1
 
-        self.optimal_rewards.append(self.bandit.pull_expected(self.bandit.best_arm))
-        R = sum(self.optimal_rewards)
+        r0 = self.bandit.pull_expected(self.bandit.best_arm))
+        self.optimal_rewards.append(r0)
+        R += r0
         r1 = np.multiply(self.total_pulls, R)
-        r2 = np.subtract(r1, sum(self.c_reward))
+        r2 = np.subtract(r1, total_reward)
         self.c_regret.append(r2)
         expected_arm = self.optim_arm
         expected_reward = self.bandit.pull_expected(expected_arm)
